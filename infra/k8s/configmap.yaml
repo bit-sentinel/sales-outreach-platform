@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: outreachai
+data:
+  APP_NAME: OutreachAI
+  APP_ENV: production
+  DEBUG: "false"
+  LOG_LEVEL: INFO
+  DATABASE_POOL_SIZE: "20"
+  DATABASE_MAX_OVERFLOW: "10"
+  PROMETHEUS_ENABLED: "true"
+  CELERY_WORKER_CONCURRENCY: "4"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: outreachai
+data:
+  NEXT_PUBLIC_APP_NAME: OutreachAI

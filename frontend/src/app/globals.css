@@ -1,0 +1,174 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* — Core palette — */
+    --background: 222 47% 5%;        /* #070b14 deep charcoal */
+    --foreground: 210 40% 98%;       /* near white */
+    --card: 222 38% 8%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 38% 8%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 239 84% 67%;          /* indigo-500 */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 222 38% 12%;
+    --secondary-foreground: 210 40% 90%;
+    --muted: 222 38% 10%;
+    --muted-foreground: 213 18% 48%;
+    --accent: 222 38% 12%;
+    --accent-foreground: 210 40% 90%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 222 32% 14%;
+    --input: 222 32% 14%;
+    --ring: 239 84% 67%;
+    --radius: 0.875rem;
+
+    /* — Sidebar tokens — */
+    --sidebar-bg: #080d18;
+    --sidebar-border: rgba(255,255,255,0.06);
+    --sidebar-text: rgba(255,255,255,0.50);
+    --sidebar-text-active: #ffffff;
+    --sidebar-item-active-bg: #4f46e5;
+    --sidebar-item-hover-bg: rgba(255,255,255,0.04);
+  }
+}
+
+@layer base {
+  html { height: 100%; }
+
+  * { @apply border-border; }
+
+  body {
+    @apply bg-background text-foreground;
+    background-color: #070b14;
+    background-image: radial-gradient(ellipse at 20% 20%, rgba(99,102,241,0.06) 0%, transparent 50%),
+                      radial-gradient(ellipse at 80% 80%, rgba(6,182,212,0.04) 0%, transparent 50%);
+    background-attachment: fixed;
+    min-height: 100%;
+    font-feature-settings: 'ss01' 1, 'cv02' 1;
+  }
+
+  ::selection { background: rgba(99,102,241,0.28); color: #fff; }
+
+  button, input, select, textarea { @apply outline-none; }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.08);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.14);
+  }
+  ::-webkit-scrollbar-track { background: transparent; }
+}
+
+@layer components {
+  /* ── Glass surfaces ─────────────────────────────────── */
+  .glass-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .glass-card-strong {
+    background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.09);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* Legacy aliases so old class names still work */
+  .app-surface       { @apply glass-card; }
+  .app-surface-strong { @apply glass-card-strong; }
+
+  /* ── Label ──────────────────────────────────────────── */
+  .app-label {
+    color: rgba(255,255,255,0.35);
+    font-size: 0.67rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  /* ── Card (legacy) ──────────────────────────────────── */
+  .card { @apply glass-card rounded-[20px]; }
+
+  /* ── Button system ──────────────────────────────────── */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    box-shadow: 0 4px 14px rgba(99,102,241,0.35);
+  }
+  .btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(99,102,241,0.45);
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all;
+    color: rgba(255,255,255,0.65);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.09);
+  }
+  .btn-secondary:hover {
+    background: rgba(255,255,255,0.09);
+    color: rgba(255,255,255,0.85);
+    transform: translateY(-1px);
+  }
+
+  /* ── Status badges ──────────────────────────────────── */
+  .badge-active  { @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25; }
+  .badge-paused  { @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/25; }
+  .badge-draft   { @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/[0.06] text-white/50 border border-white/[0.08]; }
+  .badge-ai      { @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-violet-500/15 text-violet-400 border border-violet-500/25; }
+
+  /* ── Sidebar nav item ───────────────────────────────── */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-150 w-full;
+    color: var(--sidebar-text);
+  }
+  .sidebar-item:hover { background: var(--sidebar-item-hover-bg); color: rgba(255,255,255,0.80); }
+  .sidebar-item.active { background: var(--sidebar-item-active-bg); color: var(--sidebar-text-active); }
+
+  /* ── Input field ────────────────────────────────────── */
+  .field-input {
+    @apply w-full rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/25 transition-all;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.10);
+  }
+  .field-input:focus {
+    border-color: rgba(99,102,241,0.5);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+  }
+
+  /* ── Empty state ────────────────────────────────────── */
+  .empty-state { @apply flex flex-col items-center justify-center py-16 text-center; }
+  .empty-state-icon { @apply w-14 h-14 rounded-2xl flex items-center justify-center mb-4; background: rgba(255,255,255,0.05); }
+  .empty-state-title { @apply text-base font-semibold text-white/60 mb-1; }
+  .empty-state-desc  { @apply text-sm text-white/35 max-w-xs; }
+
+  /* ── Skeleton loader ────────────────────────────────── */
+  .skeleton { @apply animate-pulse rounded-xl; background: rgba(255,255,255,0.06); }
+
+  /* ── KPI metric card ────────────────────────────────── */
+  .metric-card {
+    @apply relative overflow-hidden rounded-2xl p-5 flex flex-col justify-between;
+    min-height: 140px;
+  }
+
+  /* ── Data grid background ───────────────────────────── */
+  .data-grid {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  /* ── Section header ─────────────────────────────────── */
+  .section-header { @apply flex items-start justify-between mb-5; }
+}

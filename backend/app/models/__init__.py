@@ -1,0 +1,61 @@
+"""Central model registry – import all models so Alembic can discover them."""
+
+from app.models.tenant import (
+    Tenant,
+    User,
+    Team,
+    TeamMember,
+    ApiKey,
+    AuditLog,
+)
+from app.models.lead import (
+    Company,
+    Contact,
+    Lead,
+    LeadActivity,
+    ImportBatch,
+    EnrichmentJob,
+    ResearchData,
+    EnrichmentData,
+    AIInsight,
+    LeadScore,
+)
+from app.models.campaign import (
+    SenderAccount,
+    Campaign,
+    CampaignLead,
+    EmailTemplate,
+    Message,
+    EmailEvent,
+    FollowUp,
+    Reply,
+    SuppressionList,
+)
+
+__all__ = [
+    "Tenant",
+    "User",
+    "Team",
+    "TeamMember",
+    "ApiKey",
+    "AuditLog",
+    "Company",
+    "Contact",
+    "Lead",
+    "LeadActivity",
+    "ImportBatch",
+    "EnrichmentJob",
+    "ResearchData",
+    "EnrichmentData",
+    "AIInsight",
+    "LeadScore",
+    "SenderAccount",
+    "Campaign",
+    "CampaignLead",
+    "EmailTemplate",
+    "Message",
+    "EmailEvent",
+    "FollowUp",
+    "Reply",
+    "SuppressionList",
+]

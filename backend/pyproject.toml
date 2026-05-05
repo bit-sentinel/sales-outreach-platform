@@ -1,0 +1,30 @@
+[project]
+name = "outreachai-backend"
+version = "0.1.0"
+description = "OutreachAI – AI-powered sales outreach platform"
+requires-python = ">=3.12"
+readme = "README.md"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+select = ["E", "W", "F", "I", "N", "UP", "S", "B", "A", "C4", "SIM", "TCH"]
+ignore = ["S101"]
+
+[tool.ruff.isort]
+known-first-party = ["app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = ["error", "ignore::DeprecationWarning", "ignore::pytest.PytestUnraisableExceptionWarning"]
+markers = [
+    "integration: requires a running PostgreSQL instance",
+    "slow: takes longer than usual",
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy", "sqlalchemy.ext.mypy.plugin"]

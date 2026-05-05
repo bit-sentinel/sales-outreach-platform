@@ -1,0 +1,28 @@
+# ──────────────────────────────────────────────────────────
+# OutreachAI – Caddyfile
+# Replace YOUR_DOMAIN with your actual domain, e.g. outreachai.com
+# Caddy auto-provisions and renews TLS certificates via Let's Encrypt
+# ──────────────────────────────────────────────────────────
+
+# Frontend — serves the Next.js app
+# All /api/* requests are proxied to the backend by Next.js itself (see next.config.js rewrites)
+YOUR_DOMAIN {
+    reverse_proxy frontend:3000
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Compress responses
+    encode gzip
+}
+
+# Optional: redirect www → apex
+www.YOUR_DOMAIN {
+    redir https://YOUR_DOMAIN{uri} permanent
+}

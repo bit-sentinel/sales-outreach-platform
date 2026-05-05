@@ -1,0 +1,1621 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Lead Enrichment Strategy</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="-" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Lead Enrichment Strategy</h1>
+</header>
+<h1 id="lead-enrichment-strategy-process">Lead Enrichment Strategy &amp;
+Process</h1>
+<h2
+id="end-to-end-guide-launchhouse-events-sales-outreach-platform">End-to-End
+Guide — LaunchHouse Events / Sales Outreach Platform</h2>
+<p><em>Last updated: April 25, 2026</em></p>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol type="1">
+<li><a href="#1-executive-summary">Executive Summary</a></li>
+<li><a href="#2-system-architecture-overview">System Architecture
+Overview</a></li>
+<li><a href="#3-data-model">Data Model</a></li>
+<li><a href="#4-lead-lifecycle--status-transitions">Lead Lifecycle &amp;
+Status Transitions</a></li>
+<li><a href="#5-phase-1--lead-import--registration">Phase 1 — Lead
+Import &amp; Registration</a></li>
+<li><a href="#6-phase-2--web-research-agent">Phase 2 — Web Research
+Agent</a></li>
+<li><a href="#7-phase-3--company--contact-enrichment-agent">Phase 3 —
+Company &amp; Contact Enrichment Agent</a></li>
+<li><a href="#8-phase-4--ai-lead-scoring-engine">Phase 4 — AI Lead
+Scoring Engine</a></li>
+<li><a href="#9-phase-5--personalization--email-generation">Phase 5 —
+Personalization &amp; Email Generation</a></li>
+<li><a href="#10-phase-6--campaign-execution--email-delivery">Phase 6 —
+Campaign Execution &amp; Email Delivery</a></li>
+<li><a href="#11-orchestration--pipeline-control">Orchestration &amp;
+Pipeline Control</a></li>
+<li><a href="#12-ai-infrastructure--model-configuration">AI
+Infrastructure &amp; Model Configuration</a></li>
+<li><a href="#13-business-logic--icp-assumptions">Business Logic &amp;
+ICP Assumptions</a></li>
+<li><a href="#14-scoring-reference-card">Scoring Reference Card</a></li>
+<li><a href="#15-template-reference-card">Template Reference
+Card</a></li>
+<li><a href="#16-current-limitations">Current Limitations</a></li>
+<li><a href="#17-future-enhancements">Future Enhancements</a></li>
+</ol>
+<hr />
+<h2 id="executive-summary">1. Executive Summary</h2>
+<p>The Sales Outreach Platform automates end-to-end outbound prospecting
+for <strong>LaunchHouse Events</strong>, a Cvent development and
+professional services firm. The platform ingests raw lead lists
+(CSV/manual), runs a fully automated 3-stage AI enrichment pipeline,
+scores each lead for fit, and generates hyper-personalized email
+sequences using templates calibrated to the events industry.</p>
+<p><strong>Core value proposition:</strong> Turn a cold CSV of company
+names and emails into a ranked, personally researched, and
+actively-sequenced outbound campaign with zero human effort between
+import and first email draft.</p>
+<p><strong>Technology foundations:</strong> - Primary AI: Anthropic
+Claude (<code>claude-sonnet-4-6</code>) - Orchestration: Celery
+(distributed task queue) + Redis broker - Storage: PostgreSQL with
+multi-tenant row-level isolation - Email delivery: SendGrid - Backend:
+Python / FastAPI (async) - Frontend: Next.js 14</p>
+<hr />
+<h2 id="system-architecture-overview">2. System Architecture
+Overview</h2>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│                   USER / API LAYER                        │
+│   Lead Import (CSV/manual)  →  Enrichment Trigger API    │
+└────────────────────────┬─────────────────────────────────┘
+                         │
+                    EnrichmentService
+                    (creates jobs, dispatches)
+                         │
+              ┌──────────▼─────────────┐
+              │   Celery Queue         │
+              │  (&quot;enrichment&quot; queue)  │
+              └──────────┬─────────────┘
+                         │
+              run_enrichment_pipeline
+              ┌───────────────────────┐
+              │  Step 1: ResearchAgent │  ← Web synthesis via LLM
+              │  Step 2: EnrichmentAgent│  ← Firmographic structuring
+              │  Step 3: ScoringAgent  │  ← 10-signal weighted score
+              └──────────┬────────────┘
+                         │
+              Lead marked &quot;enriched&quot; + &quot;scored&quot;
+                         │
+              ┌──────────▼─────────────┐
+              │  Campaign Assignment    │
+              │  (manual or auto-route) │
+              └──────────┬─────────────┘
+                         │
+              process_campaign_lead
+              ┌───────────────────────┐
+              │  PersonalizationAgent  │  ← T1–T17 template selection
+              │  Message draft created │
+              │  send_email dispatched │
+              └──────────┬────────────┘
+                         │
+              ┌──────────▼─────────────┐
+              │   SendGrid API          │
+              │   Email delivered       │
+              └─────────────────────────┘</code></pre>
+<hr />
+<h2 id="data-model">3. Data Model</h2>
+<h3 id="core-tables">Core Tables</h3>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 33%" />
+<col style="width: 40%" />
+</colgroup>
+<thead>
+<tr>
+<th>Table</th>
+<th>Purpose</th>
+<th>Key Fields</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>companies</code></td>
+<td>Firmographic data per company</td>
+<td><code>name</code>, <code>domain</code>, <code>industry</code>,
+<code>employee_count</code>, <code>revenue_range</code>,
+<code>location</code>, <code>description</code>,
+<code>technologies</code> (JSONB)</td>
+</tr>
+<tr>
+<td><code>contacts</code></td>
+<td>Individual people</td>
+<td><code>email</code>, <code>first_name</code>, <code>last_name</code>,
+<code>title</code>, <code>department</code>, <code>phone</code>,
+<code>linkedin_url</code>, <code>location</code>,
+<code>timezone</code></td>
+</tr>
+<tr>
+<td><code>leads</code></td>
+<td>The join between contact + company with pipeline state</td>
+<td><code>status</code>, <code>enrichment_status</code>,
+<code>source</code>, <code>tags</code>, <code>enriched_at</code></td>
+</tr>
+<tr>
+<td><code>lead_scores</code></td>
+<td>AI-generated score per lead</td>
+<td><code>overall_score</code> (float), <code>tier</code>
+(hot/warm/cold), <code>signal_scores</code> (JSONB),
+<code>explanation</code>, <code>model_used</code></td>
+</tr>
+<tr>
+<td><code>enrichment_jobs</code></td>
+<td>Audit trail per enrichment step</td>
+<td><code>job_type</code>, <code>status</code>, <code>provider</code>,
+<code>input_data</code>, <code>output_data</code>, <code>error</code>,
+<code>duration_ms</code>, <code>tokens_used</code>,
+<code>cost_usd</code></td>
+</tr>
+<tr>
+<td><code>research_data</code></td>
+<td>Raw research output</td>
+<td><code>source</code>, <code>url</code>, <code>title</code>,
+<code>content</code>, <code>relevance_score</code>,
+<code>metadata</code> (JSONB)</td>
+</tr>
+<tr>
+<td><code>enrichment_data</code></td>
+<td>Structured enrichment output</td>
+<td><code>data_type</code>, <code>provider</code>, <code>data</code>
+(JSONB), <code>confidence</code>, <code>version</code></td>
+</tr>
+<tr>
+<td><code>ai_insights</code></td>
+<td>Human-readable AI summaries</td>
+<td><code>insight_type</code>, <code>content</code>,
+<code>confidence</code>, <code>model_used</code>,
+<code>tokens_used</code></td>
+</tr>
+<tr>
+<td><code>lead_activities</code></td>
+<td>Audit log of all events</td>
+<td><code>activity_type</code>, <code>title</code>,
+<code>description</code>, <code>metadata</code> (JSONB)</td>
+</tr>
+<tr>
+<td><code>import_batches</code></td>
+<td>CSV upload tracking</td>
+<td><code>file_name</code>, <code>status</code>,
+<code>total_rows</code>, <code>processed_rows</code>,
+<code>success_rows</code>, <code>error_rows</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="campaign-tables">Campaign Tables</h3>
+<table>
+<colgroup>
+<col style="width: 43%" />
+<col style="width: 56%" />
+</colgroup>
+<thead>
+<tr>
+<th>Table</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>campaigns</code></td>
+<td>Campaign definition with sequence steps, sender, status</td>
+</tr>
+<tr>
+<td><code>campaign_leads</code></td>
+<td>Lead × Campaign assignment with <code>current_step</code>,
+<code>status</code></td>
+</tr>
+<tr>
+<td><code>messages</code></td>
+<td>Every email draft/sent — <code>subject</code>,
+<code>body_html</code>, <code>body_text</code>, <code>status</code>,
+<code>ai_generated</code>, <code>personalization_hooks</code></td>
+</tr>
+<tr>
+<td><code>follow_ups</code></td>
+<td>Scheduled next-step email queue</td>
+</tr>
+<tr>
+<td><code>replies</code></td>
+<td>Inbound reply tracking with <code>intent</code> classification</td>
+</tr>
+<tr>
+<td><code>email_events</code></td>
+<td>Open/click/bounce/sent tracking from SendGrid webhooks</td>
+</tr>
+</tbody>
+</table>
+<h3 id="all-entities-are-multi-tenant">All Entities Are
+Multi-Tenant</h3>
+<p>Every table includes a <code>tenant_id</code> column linked to the
+<code>tenants</code> table. Row-level isolation is enforced at the
+middleware and query layer — tenants cannot see each other’s data.</p>
+<hr />
+<h2 id="lead-lifecycle-status-transitions">4. Lead Lifecycle &amp;
+Status Transitions</h2>
+<h3 id="lead.status-flow"><code>lead.status</code> Flow</h3>
+<pre><code>new
+ │
+ ├─ (enrichment triggered) ──→ enriching
+ │                                  │
+ │                         (pipeline completes) ──→ scored
+ │                                  │
+ │                         (campaign assigned) ──→ campaign_active
+ │                                  │
+ │                         (reply received) ──→ replied
+ │                                  │
+ │                         (deal closed) ──→ converted
+ │                         (disqualified) ──→ disqualified
+ │
+ └─ (manually set) ──→ any state above</code></pre>
+<h3 id="lead.enrichment_status-flow"><code>lead.enrichment_status</code>
+Flow</h3>
+<pre><code>pending
+ │
+ ├─ (pipeline started) ──→ enriching
+ │
+ ├─ (all steps complete) ──→ enriched
+ │
+ └─ (pipeline failed) ──→ failed</code></pre>
+<h3
+id="enrichment_job.status-per-step"><code>enrichment_job.status</code>
+per step</h3>
+<pre><code>pending → running → completed
+                 └→ failed (records error message)</code></pre>
+<hr />
+<h2 id="phase-1-lead-import-registration">5. Phase 1 — Lead Import &amp;
+Registration</h2>
+<h3 id="how-leads-enter-the-system">How Leads Enter the System</h3>
+<p>Leads are imported in two ways: 1. <strong>CSV Upload</strong> — via
+the <code>/api/leads/import</code> endpoint. Columns are mapped to
+<code>Company</code> and <code>Contact</code> fields. Each row creates a
+<code>Company</code> + <code>Contact</code> + <code>Lead</code> record.
+Batch tracked in <code>import_batches</code>. 2. <strong>Manual
+Entry</strong> — via the UI form or REST API. Single point-of-entry
+creating the same three records.</p>
+<h3 id="initial-data-required">Initial Data Required</h3>
+<ul>
+<li>Company name (required)</li>
+<li>Contact email (required)</li>
+<li>First/last name (optional but strongly recommended)</li>
+<li>Job title (optional)</li>
+<li>Company domain (optional — improves research quality
+significantly)</li>
+</ul>
+<h3 id="post-import-state">Post-Import State</h3>
+<ul>
+<li><code>lead.status = "new"</code></li>
+<li><code>lead.enrichment_status = "pending"</code></li>
+<li>Company, Contact records created with whatever raw data was
+available</li>
+<li>No enrichment, scoring, or AI processing has occurred yet</li>
+</ul>
+<h3 id="triggering-enrichment">Triggering Enrichment</h3>
+<p>Enrichment is triggered explicitly — either: - Manually: user selects
+leads in the UI and clicks “Enrich” - Via API:
+<code>POST /api/enrichment/enrich</code> with <code>lead_ids[]</code>
+and <code>enrichment_types[]</code></p>
+<p>Default enrichment types requested:
+<code>["web_research", "company", "scoring"]</code></p>
+<hr />
+<h2 id="phase-2-web-research-agent">6. Phase 2 — Web Research Agent</h2>
+<p><strong>Class:</strong> <code>ResearchAgent</code>
+(<code>agents/research_agent.py</code>)<br />
+<strong>LLM Temperature:</strong> 0.3 (slight creativity for
+synthesis)<br />
+<strong>Model:</strong> Claude <code>claude-sonnet-4-6</code> via
+<code>BaseAgent.get_llm()</code></p>
+<h3 id="purpose">Purpose</h3>
+<p>Gather publicly available intelligence about the company and contact:
+news, events, technology stack, funding, and buying signals — all
+without any human effort.</p>
+<h3 id="search-strategy-5-queries-built-per-lead">Search Strategy — 5
+Queries Built per Lead</h3>
+<table>
+<colgroup>
+<col style="width: 37%" />
+<col style="width: 37%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Query #</th>
+<th>Pattern</th>
+<th>Goal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>{company_name} company news recent</code></td>
+<td>Latest company updates, announcements, changes</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>{company_name} events Cvent</code></td>
+<td>Cvent usage evidence, event calendar, hosted events</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>{company_name} technology stack</code></td>
+<td>Technology platforms in use</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>site:{domain}</code></td>
+<td>Homepage / about page / events page scan</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>{contact_name} {company_name} LinkedIn</code></td>
+<td>Contact seniority, career path, responsibilities</td>
+</tr>
+</tbody>
+</table>
+<h3 id="data-sources-current-status">Data Sources (Current Status)</h3>
+<table>
+<colgroup>
+<col style="width: 32%" />
+<col style="width: 32%" />
+<col style="width: 36%" />
+</colgroup>
+<thead>
+<tr>
+<th>Source</th>
+<th>Status</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Tavily</strong></td>
+<td>✅ Live</td>
+<td>Primary web search — AI-optimised snippets, used for all 5 per-lead
+queries</td>
+</tr>
+<tr>
+<td><strong>Firecrawl (search)</strong></td>
+<td>✅ Live (fallback)</td>
+<td>Full-page search fallback if Tavily returns no results</td>
+</tr>
+<tr>
+<td><strong>Firecrawl (scrape)</strong></td>
+<td>✅ Live</td>
+<td>Homepage scrape — always runs if domain is known, returns full
+markdown (capped 3 000 chars)</td>
+</tr>
+<tr>
+<td><strong>Claude LLM</strong></td>
+<td>✅ Live</td>
+<td>Synthesis and structuring of all search findings into
+<code>ResearchOutput</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Provider priority:</strong> Tavily is tried first for every
+query. If it returns results, Firecrawl search is skipped. Firecrawl
+scrape runs independently in parallel for the homepage regardless of
+search results.</p>
+<p><strong>Python packages required:</strong>
+<code>tavily-python&gt;=0.3.0</code>,
+<code>firecrawl-py&gt;=0.0.16</code> (both in
+<code>requirements.txt</code> and installed in all Docker
+containers).</p>
+<h3 id="research-output-schema-researchoutput">Research Output Schema
+(<code>ResearchOutput</code>)</h3>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;company_summary&quot;</span><span class="fu">:</span> <span class="st">&quot;2-3 sentence overview of the company&quot;</span><span class="fu">,</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;recent_news&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;title&quot;</span><span class="fu">:</span> <span class="st">&quot;...&quot;</span><span class="fu">,</span> <span class="dt">&quot;url&quot;</span><span class="fu">:</span> <span class="st">&quot;...&quot;</span><span class="fu">,</span> <span class="dt">&quot;date&quot;</span><span class="fu">:</span> <span class="st">&quot;...&quot;</span><span class="fu">,</span> <span class="dt">&quot;summary&quot;</span><span class="fu">:</span> <span class="st">&quot;...&quot;</span> <span class="fu">}</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;key_people&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span> <span class="dt">&quot;name&quot;</span><span class="fu">:</span> <span class="st">&quot;...&quot;</span><span class="fu">,</span> <span class="dt">&quot;title&quot;</span><span class="fu">:</span> <span class="st">&quot;...&quot;</span><span class="fu">,</span> <span class="dt">&quot;linkedin_url&quot;</span><span class="fu">:</span> <span class="st">&quot;...&quot;</span> <span class="fu">}</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;technology_stack&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;Cvent&quot;</span><span class="ot">,</span> <span class="st">&quot;Salesforce&quot;</span><span class="ot">,</span> <span class="st">&quot;Marketo&quot;</span><span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;funding_info&quot;</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;stage&quot;</span><span class="fu">:</span> <span class="st">&quot;Series B&quot;</span><span class="fu">,</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;amount&quot;</span><span class="fu">:</span> <span class="st">&quot;$50M&quot;</span><span class="fu">,</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="dt">&quot;investors&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;Sequoia&quot;</span><span class="ot">,</span> <span class="st">&quot;...&quot;</span><span class="ot">]</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">},</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;industry_signals&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;company posted 3 event manager roles in past 30 days&quot;</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;events_attended&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;event&quot;</span><span class="fu">:</span> <span class="st">&quot;Dreamforce 2024&quot;</span><span class="fu">,</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;year&quot;</span><span class="fu">:</span> <span class="dv">2024</span><span class="fu">,</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;month&quot;</span><span class="fu">:</span> <span class="dv">9</span><span class="fu">,</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;date_label&quot;</span><span class="fu">:</span> <span class="st">&quot;September 2024&quot;</span><span class="fu">,</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;type&quot;</span><span class="fu">:</span> <span class="st">&quot;past&quot;</span><span class="fu">,</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;role&quot;</span><span class="fu">:</span> <span class="st">&quot;sponsor&quot;</span><span class="fu">,</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;confirmed&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;url&quot;</span><span class="fu">:</span> <span class="st">&quot;https://...&quot;</span><span class="fu">,</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;description&quot;</span><span class="fu">:</span> <span class="st">&quot;Gold sponsor, hosted networking dinner&quot;</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;competitor_info&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;Competitor A uses similar platform&quot;</span><span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;relevance_score&quot;</span><span class="fu">:</span> <span class="fl">0.82</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<h3 id="events-attended-classification">Events Attended —
+Classification</h3>
+<p>The <code>events_attended</code> array is the most critical research
+output for personalization. Each event is classified across two
+dimensions:</p>
+<p><strong><code>type</code> values:</strong> - <code>past</code> —
+event has already occurred - <code>upcoming</code> — event is in the
+future - <code>recurring</code> — annual/regular event</p>
+<p><strong><code>role</code> values:</strong> - <code>attendee</code> —
+company sent staff to the event - <code>sponsor</code> — company
+financially sponsored the event - <code>host</code> — company
+ran/organized the event - <code>speaker</code> — company had a speaker
+at the event - <code>unknown</code> — role unclear from available
+data</p>
+<h3 id="storage">Storage</h3>
+<p>Research output is stored in two places: 1.
+<code>research_data</code> table — raw
+<code>source="ai_synthesis"</code> record with full JSON content 2.
+<code>ai_insights</code> table —
+<code>insight_type="research_summary"</code> with human-readable summary
+text</p>
+<p>The corresponding <code>enrichment_jobs</code> record
+(type=<code>web_research</code>) is marked <code>completed</code> on
+success, <code>failed</code> with error text if an exception occurs.</p>
+<hr />
+<h2 id="phase-3-company-contact-enrichment-agent">7. Phase 3 — Company
+&amp; Contact Enrichment Agent</h2>
+<p><strong>Class:</strong> <code>EnrichmentAgent</code>
+(<code>agents/enrichment_agent.py</code>)<br />
+<strong>LLM Temperature:</strong> 0.2 (precision-focused, minimal
+hallucination)<br />
+<strong>Model:</strong> Claude <code>claude-sonnet-4-6</code></p>
+<h3 id="purpose-1">Purpose</h3>
+<p>Take the raw lead data + Phase 2 research output and produce
+structured firmographic and contact-demographic data. Determine the
+company’s exact profile and assess the contact’s decision-making
+authority.</p>
+<h3 id="inputs">Inputs</h3>
+<ol type="1">
+<li>Raw lead data (company name, domain, contact name/title, any
+existing DB fields)</li>
+<li>Full <code>ResearchOutput</code> from Phase 2</li>
+</ol>
+<h3 id="enrichment-output-schema">Enrichment Output Schema</h3>
+<p><strong>Company block:</strong></p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;employee_count_range&quot;</span><span class="fu">:</span> <span class="st">&quot;51-200&quot;</span><span class="fu">,</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;revenue_range&quot;</span><span class="fu">:</span> <span class="st">&quot;$10M-$50M&quot;</span><span class="fu">,</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;industry&quot;</span><span class="fu">:</span> <span class="st">&quot;Technology / SaaS&quot;</span><span class="fu">,</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;sub_industry&quot;</span><span class="fu">:</span> <span class="st">&quot;Event Management Software&quot;</span><span class="fu">,</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;founded_year&quot;</span><span class="fu">:</span> <span class="dv">2018</span><span class="fu">,</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;headquarters&quot;</span><span class="fu">:</span> <span class="st">&quot;San Francisco, CA&quot;</span><span class="fu">,</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;description&quot;</span><span class="fu">:</span> <span class="st">&quot;Cloud-based event operations platform for enterprise marketing teams&quot;</span><span class="fu">,</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;technologies&quot;</span><span class="fu">:</span> <span class="ot">[</span><span class="st">&quot;Cvent&quot;</span><span class="ot">,</span> <span class="st">&quot;Salesforce&quot;</span><span class="ot">,</span> <span class="st">&quot;HubSpot&quot;</span><span class="ot">,</span> <span class="st">&quot;Zoom&quot;</span><span class="ot">]</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><strong>Contact block:</strong></p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;seniority&quot;</span><span class="fu">:</span> <span class="st">&quot;Director&quot;</span><span class="fu">,</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;department&quot;</span><span class="fu">:</span> <span class="st">&quot;Events&quot;</span><span class="fu">,</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;likely_responsibilities&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Manages Cvent license and configuration&quot;</span><span class="ot">,</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Coordinates with marketing on event calendar&quot;</span><span class="ot">,</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;Owns vendor selection for event tech&quot;</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;decision_maker&quot;</span><span class="fu">:</span> <span class="kw">true</span><span class="fu">,</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;buyer_persona&quot;</span><span class="fu">:</span> <span class="st">&quot;Events Operations Lead&quot;</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<p><strong>Confidence score:</strong> 0.0–1.0 (how confident the agent
+is in its output given available data)</p>
+<h3 id="database-write-back">Database Write-Back</h3>
+<p>After enrichment, the pipeline <strong>updates existing company and
+contact records</strong> with the enriched data: -
+<code>company.industry</code> ← <code>enrichment.company.industry</code>
+- <code>company.description</code> ←
+<code>enrichment.company.description</code> -
+<code>contact.department</code> ←
+<code>enrichment.contact.department</code> - <code>contact.title</code>
+← <code>enrichment.contact.seniority</code> (if not already set)</p>
+<p>These write-backs ensure the main records stay current and that the
+UI displays enriched values everywhere.</p>
+<h3 id="storage-1">Storage</h3>
+<ol type="1">
+<li><code>enrichment_data</code> table —
+<code>data_type="company_contact"</code>,
+<code>provider="anthropic"</code>, full JSON in <code>data</code>
+column</li>
+<li><code>ai_insights</code> table —
+<code>insight_type="company_enrichment"</code> with narrative
+summary</li>
+</ol>
+<hr />
+<h2 id="phase-4-ai-lead-scoring-engine">8. Phase 4 — AI Lead Scoring
+Engine</h2>
+<p><strong>Class:</strong> <code>ScoringAgent</code>
+(<code>agents/scoring_agent.py</code>)<br />
+<strong>LLM Temperature:</strong> 0.2 (deterministic scoring)<br />
+<strong>Model:</strong> Claude <code>claude-sonnet-4-6</code></p>
+<h3 id="purpose-2">Purpose</h3>
+<p>Assign a numeric fit score (0–100) and tier (Hot/Warm/Cold) to each
+lead, enabling sales prioritization and automated campaign routing.</p>
+<h3 id="inputs-1">Inputs</h3>
+<ol type="1">
+<li>Lead data (contact + company fields)</li>
+<li><code>EnrichmentOutput</code> from Phase 3</li>
+<li><code>ResearchOutput</code> from Phase 2</li>
+</ol>
+<h3 id="the-10-scoring-signals">The 10 Scoring Signals</h3>
+<table>
+<colgroup>
+<col style="width: 7%" />
+<col style="width: 31%" />
+<col style="width: 19%" />
+<col style="width: 41%" />
+</colgroup>
+<thead>
+<tr>
+<th>#</th>
+<th>Signal Name</th>
+<th>Weight</th>
+<th>What It Measures</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Company Size Fit</strong></td>
+<td><strong>15%</strong></td>
+<td>Does the company’s headcount match LaunchHouse’s sweet spot (event
+teams that need outside help but aren’t enterprise enough for full
+agencies)?</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Industry Fit</strong></td>
+<td><strong>12%</strong></td>
+<td>Is the company in a Cvent-heavy vertical? (Corporate events,
+association management, pharma, finance, tech conference orgs)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Title / Seniority Fit</strong></td>
+<td><strong>15%</strong></td>
+<td>Is the contact a decision-maker or influencer for Cvent builds?
+(Director/VP/Head of Events, Marketing Operations, IT)</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Technology Fit</strong></td>
+<td><strong>10%</strong></td>
+<td>Does the company use Cvent or adjacent event tech (Aventri,
+RainFocus, bizzabo)? Any mention of event tech modernization?</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Recent Activity Signals</strong></td>
+<td><strong>12%</strong></td>
+<td>Hiring for event roles, conference announcements, new
+office/expansion, increased event calendars</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Funding / Growth</strong></td>
+<td><strong>8%</strong></td>
+<td>Recent funding rounds often precede expanded event calendars
+(investor days, road shows, conferences)</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Event Usage (Cvent)</strong></td>
+<td><strong>10%</strong></td>
+<td>Direct evidence of Cvent usage — sponsor/host/speaker at
+Cvent-powered events, Cvent case studies, Cvent community mentions</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Engagement History</strong></td>
+<td><strong>8%</strong></td>
+<td>Prior interaction with LaunchHouse (email opens, clicks, past
+replies, known relationship)</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>Timing Signals</strong></td>
+<td><strong>5%</strong></td>
+<td>Budget cycle indicators (Q4 planning, fiscal year end), contract
+renewal timing, recent Cvent RFP activity</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>Geographic Fit</strong></td>
+<td><strong>5%</strong></td>
+<td>US-based preferred (primary delivery market). North America / UK
+secondary.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total weights sum to 100%.</strong></p>
+<h3 id="score-calculation">Score Calculation</h3>
+<p>For each signal, Claude assigns a sub-score from <strong>0.0 to
+1.0</strong> with reasoning. The final <code>overall_score</code>
+is:</p>
+<p><span class="math display">$$\text{overall\_score} = \sum_{i=1}^{10}
+\text{signal\_score}_i \times \text{weight}_i \times 100$$</span></p>
+<p>Example: - Company Size: 0.8 × 0.15 = 0.12 - Industry Fit: 0.9 × 0.12
+= 0.108 - Title/Seniority: 0.7 × 0.15 = 0.105 - Technology Fit: 1.0 ×
+0.10 = 0.10 - <em>(… sum all 10 …)</em> - <strong>Final score: 72/100 →
+Warm tier</strong></p>
+<h3 id="tier-definitions">Tier Definitions</h3>
+<table>
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 17%" />
+</colgroup>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Score Range</th>
+<th>Sales Action</th>
+<th>Color</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🔴 <strong>Hot</strong></td>
+<td>75–100</td>
+<td>Prioritize immediately — highest probability ICP match</td>
+<td>Red/Crimson</td>
+</tr>
+<tr>
+<td>🟡 <strong>Warm</strong></td>
+<td>50–74</td>
+<td>Moderate interest — nurture with personalized outreach</td>
+<td>Amber</td>
+</tr>
+<tr>
+<td>🔵 <strong>Cold</strong></td>
+<td>0–49</td>
+<td>Low probability — consider for future nurturing or disqualify</td>
+<td>Blue/Gray</td>
+</tr>
+</tbody>
+</table>
+<h3 id="scoring-output-schema-scoringoutput">Scoring Output Schema
+(<code>ScoringOutput</code>)</h3>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;overall_score&quot;</span><span class="fu">:</span> <span class="fl">72.4</span><span class="fu">,</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;tier&quot;</span><span class="fu">:</span> <span class="st">&quot;warm&quot;</span><span class="fu">,</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;signals&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">{</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;signal_name&quot;</span><span class="fu">:</span> <span class="st">&quot;Technology Fit&quot;</span><span class="fu">,</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;score&quot;</span><span class="fu">:</span> <span class="fl">0.90</span><span class="fu">,</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;weight&quot;</span><span class="fu">:</span> <span class="fl">0.10</span><span class="fu">,</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>      <span class="dt">&quot;reasoning&quot;</span><span class="fu">:</span> <span class="st">&quot;Company mentioned Cvent in two job postings and LinkedIn bio references &#39;Cvent Community&#39;&quot;</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">}</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span><span class="fu">,</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;explanation&quot;</span><span class="fu">:</span> <span class="st">&quot;Strong technology fit with confirmed Cvent usage. Director-level contact in Events team with likely purchasing authority. Company is 200-500 employees in growth phase with recent Series B - typical pre-expansion event calendar growth. Scored warm due to no direct recent engagement and uncertain timing.&quot;</span><span class="fu">,</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;recommended_action&quot;</span><span class="fu">:</span> <span class="st">&quot;Add to warm nurture sequence. Lead with T8 template if upcoming events confirmed, otherwise T1/T6.&quot;</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<h3 id="storage-2">Storage</h3>
+<ol type="1">
+<li><code>lead_scores</code> table — <code>overall_score</code>,
+<code>tier</code>, <code>signal_scores</code> (full JSON),
+<code>explanation</code>, <code>model_used="claude"</code></li>
+<li><code>ai_insights</code> table —
+<code>insight_type="lead_score"</code> with narrative</li>
+<li><code>lead.status</code> updated to <code>"scored"</code></li>
+</ol>
+<hr />
+<h2 id="phase-5-personalization-email-generation">9. Phase 5 —
+Personalization &amp; Email Generation</h2>
+<p><strong>Class:</strong> <code>PersonalizationAgent</code>
+(<code>agents/personalization_agent.py</code>)<br />
+<strong>Model:</strong> Claude <code>claude-sonnet-4-6</code><br />
+<strong>Template Library:</strong> 17 templates (T1–T17)</p>
+<h3 id="purpose-3">Purpose</h3>
+<p>Generate hyper-personalized, on-brand cold email copy by selecting
+the right template from the playbook and filling it with lead-specific
+context. The output is a review-ready email draft — not a
+robo-blast.</p>
+<h3 id="context-provided-to-the-agent">Context Provided to the
+Agent</h3>
+<p>The agent receives: 1. <strong>Lead data</strong> — contact name,
+title, company, industry, location 2. <strong>Research data</strong> —
+events attended, recent news, technology stack, buying signals (from
+Phases 2–3) 3. <strong>Sender info</strong> — first name, calendar link,
+company name (LaunchHouse Events) 4. <strong>Step config</strong> —
+which sequence step this is (1–4) 5. <strong>Previous email
+subject</strong> — for reply-handler continuity 6. <strong>Reply
+intent</strong> — if the lead has replied, the classified intent
+(positive/not-now/wrong-contact/etc.)</p>
+<h3 id="template-selection-hierarchy-strict-priority-order">Template
+Selection Hierarchy (Strict Priority Order)</h3>
+<p>The agent follows this decision tree — the <strong>first matching
+condition wins</strong>:</p>
+<pre><code>1. Reply received?
+   ├─ Intent = positive interest          → T10 (Positive Interest Reply)
+   ├─ Intent = &quot;send more info&quot;           → T11 (Send More Info Reply)
+   ├─ Intent = &quot;not now&quot; / deferral       → T12 (Not Now Reply)
+   ├─ Intent = &quot;already have support&quot;     → T13 (Already Have Support Reply)
+   └─ Intent = wrong contact / referral   → T14 (Wrong Contact / Referral Ask)
+
+2. No reply — upcoming event confirmed?
+   ├─ Event 0–30 days away                → T7 (Rush Framing)
+   ├─ Event 31–120 days away              → T8 (Build Scoping — highest converting)
+   └─ Event 120+ days away / past event   → T5 (Event Trigger)
+
+3. Recent news ≤45 days + events inferable → T9 (News Trigger)
+
+4. No event/news but activity inferable    → T6 (Fit-Based)
+
+5. Core sequence steps (default):
+   ├─ Step 1                              → T1 (Initial Outreach)
+   ├─ Step 2                              → T2 (Value Add Follow-Up)
+   ├─ Step 3                              → T3 (Bump — &quot;worth a reply?&quot;)
+   └─ Step 4                              → T4 (Break-Up / Final Touch)
+
+6. Scenario templates (special cases):
+   ├─ Voicemail left                      → T15 (Voicemail Follow-Up)
+   ├─ Meeting just booked                 → T16 (Meeting Confirmation)
+   └─ Post-call                           → T17 (Post-Call Recap)</code></pre>
+<h3 id="the-17-templates-summary">The 17 Templates — Summary</h3>
+<h4 id="core-sequence">Core Sequence</h4>
+<table>
+<thead>
+<tr>
+<th>Template</th>
+<th>Name</th>
+<th>Timing</th>
+<th>CTA</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T1</td>
+<td>Initial Outreach</td>
+<td>Day 1</td>
+<td>One-pager or 15-min call</td>
+</tr>
+<tr>
+<td>T2</td>
+<td>Value Add Follow-Up</td>
+<td>Day 4</td>
+<td>Share useful content + light ask</td>
+</tr>
+<tr>
+<td>T3</td>
+<td>Bump</td>
+<td>Day 9</td>
+<td>“Worth a reply or not?”</td>
+</tr>
+<tr>
+<td>T4</td>
+<td>Break-Up</td>
+<td>Day 20</td>
+<td>Final touch → moves to nurture</td>
+</tr>
+</tbody>
+</table>
+<h4 id="event-news-triggers">Event &amp; News Triggers</h4>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 15%" />
+<col style="width: 27%" />
+<col style="width: 32%" />
+</colgroup>
+<thead>
+<tr>
+<th>Template</th>
+<th>Name</th>
+<th>Condition</th>
+<th>Key Framing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T5</td>
+<td>Event Trigger</td>
+<td>Verified event, any date</td>
+<td>Event-specific Cvent build angle</td>
+</tr>
+<tr>
+<td>T6</td>
+<td>Fit-Based</td>
+<td>No event found, activity inferable</td>
+<td>Industry/motion overflow capacity</td>
+</tr>
+<tr>
+<td>T7</td>
+<td>Upcoming Event — Rush</td>
+<td>0–30 days to event</td>
+<td>Rush capacity, same-day turnaround</td>
+</tr>
+<tr>
+<td>T8</td>
+<td>Upcoming Event — Build</td>
+<td>31–120 days</td>
+<td>Fixed-fee build scoping (highest-converting)</td>
+</tr>
+<tr>
+<td>T9</td>
+<td>News Trigger</td>
+<td>News ≤45 days + event implication</td>
+<td>Congratulate + anticipate event expansion</td>
+</tr>
+</tbody>
+</table>
+<h4 id="reply-handlers">Reply Handlers</h4>
+<table>
+<thead>
+<tr>
+<th>Template</th>
+<th>Name</th>
+<th>Trigger</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T10</td>
+<td>Positive Interest</td>
+<td>Lead expressed interest</td>
+</tr>
+<tr>
+<td>T11</td>
+<td>Send More Info</td>
+<td>Lead asked for details</td>
+</tr>
+<tr>
+<td>T12</td>
+<td>Not Now</td>
+<td>Lead deferred</td>
+</tr>
+<tr>
+<td>T13</td>
+<td>Already Have Support</td>
+<td>Lead has existing vendor</td>
+</tr>
+<tr>
+<td>T14</td>
+<td>Wrong Contact / Referral</td>
+<td>Reached wrong person</td>
+</tr>
+</tbody>
+</table>
+<h4 id="scenario-templates">Scenario Templates</h4>
+<table>
+<thead>
+<tr>
+<th>Template</th>
+<th>Name</th>
+<th>Trigger</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T15</td>
+<td>Voicemail Follow-Up</td>
+<td>Within 30 min of voicemail</td>
+</tr>
+<tr>
+<td>T16</td>
+<td>Meeting Confirmation</td>
+<td>Immediately after booking</td>
+</tr>
+<tr>
+<td>T17</td>
+<td>Post-Call Recap</td>
+<td>Within 2 hours of call</td>
+</tr>
+</tbody>
+</table>
+<h3 id="token-system">Token System</h3>
+<p>Each template uses <code>{{token}}</code> placeholders that the agent
+fills from lead/research data:</p>
+<table>
+<colgroup>
+<col style="width: 29%" />
+<col style="width: 33%" />
+<col style="width: 37%" />
+</colgroup>
+<thead>
+<tr>
+<th>Token</th>
+<th>Source</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{{first_name}}</code></td>
+<td><code>contact.first_name</code></td>
+<td>“Sarah”</td>
+</tr>
+<tr>
+<td><code>{{company_name}}</code></td>
+<td><code>company.name</code></td>
+<td>“Acme Corp”</td>
+</tr>
+<tr>
+<td><code>{{event_name}}</code></td>
+<td>Research events_attended</td>
+<td>“Dreamforce 2025”</td>
+</tr>
+<tr>
+<td><code>{{event_date_phrase}}</code></td>
+<td>Research events_attended</td>
+<td>“mid-September”</td>
+</tr>
+<tr>
+<td><code>{{days_out}}</code></td>
+<td>Computed from event date</td>
+<td>“43”</td>
+</tr>
+<tr>
+<td><code>{{news_headline_short}}</code></td>
+<td>Research recent_news</td>
+<td>“your Series B”</td>
+</tr>
+<tr>
+<td><code>{{news_event_implication}}</code></td>
+<td>LLM-generated from news</td>
+<td>“growth-stage companies typically double their event calendar”</td>
+</tr>
+<tr>
+<td><code>{{company_vertical_or_motion}}</code></td>
+<td>Enrichment industry</td>
+<td>“enterprise SaaS”</td>
+</tr>
+<tr>
+<td><code>{{sender_first_name}}</code></td>
+<td>settings / SenderAccount</td>
+<td>“Snehdeep”</td>
+</tr>
+<tr>
+<td><code>{{sender_calendar_link}}</code></td>
+<td>settings</td>
+<td>Calendly URL</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sequence-suppression-rules">Sequence Suppression Rules</h3>
+<ul>
+<li>After T4 (break-up email), no new sequence starts within <strong>90
+days</strong></li>
+<li><strong>Maximum 4 emails</strong> in any active sequence</li>
+<li>Reply received at any step → all remaining sequence steps route to
+reply handlers</li>
+<li>“Not now” reply → log revisit window, resume outreach at that
+time</li>
+</ul>
+<h3 id="email-output-format">Email Output Format</h3>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode json"><code class="sourceCode json"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;subject&quot;</span><span class="fu">:</span> <span class="st">&quot;Cvent build plan for Dreamforce 2025?&quot;</span><span class="fu">,</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;body_html&quot;</span><span class="fu">:</span> <span class="st">&quot;&lt;html&gt;...&lt;/html&gt;&quot;</span><span class="fu">,</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;body_text&quot;</span><span class="fu">:</span> <span class="st">&quot;Hi Sarah,</span><span class="ch">\n\n</span><span class="st">Dreamforce in mid-September...&quot;</span><span class="fu">,</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;template_used&quot;</span><span class="fu">:</span> <span class="st">&quot;T8&quot;</span><span class="fu">,</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="dt">&quot;personalization_hooks&quot;</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;event: Dreamforce 2025 (31-120 days)&quot;</span><span class="ot">,</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;role: sponsor&quot;</span><span class="ot">,</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;template: T8&quot;</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="ot">]</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code></pre></div>
+<hr />
+<h2 id="phase-6-campaign-execution-email-delivery">10. Phase 6 —
+Campaign Execution &amp; Email Delivery</h2>
+<h3 id="campaign-structure">Campaign Structure</h3>
+<p>A campaign contains: - <strong>Sequence steps</strong> — ordered
+array of <code>{ step, delay_days, condition, subject_hint }</code>
+objects - <strong>Sender account</strong> — which FROM email and display
+name to use - <strong>Status</strong> — draft / active / paused /
+completed</p>
+<p>Standard 4-step sequence:</p>
+<pre><code>Step 0: Day 0  (immediate)
+Step 1: Day 4  (delay_days: 4, condition: &quot;no_reply&quot;)
+Step 2: Day 9  (delay_days: 5, condition: &quot;no_reply&quot;)
+Step 3: Day 20 (delay_days: 11, condition: &quot;no_reply&quot;)</code></pre>
+<h3 id="campaign-lead-processing-process_campaign_lead">Campaign Lead
+Processing (<code>process_campaign_lead</code>)</h3>
+<p>For each lead in the campaign:</p>
+<ol type="1">
+<li><strong>Check reply condition</strong> — if step has
+<code>condition: "no_reply"</code> and a reply exists → skip, mark
+completed</li>
+<li><strong>Fetch full context</strong> — Lead, Contact, Company,
+AIInsights, ResearchData, EnrichmentData</li>
+<li><strong>Resolve sender</strong> — reads <code>SenderAccount</code>
+linked to campaign; falls back to
+<code>settings.sender_first_name</code></li>
+<li><strong>Handle Test Mode</strong> — if tenant has test mode enabled
+with test email addresses, round-robins delivery to test emails (stored
+in <code>personalization_data.test_email_override</code>); production
+contacts untouched</li>
+<li><strong>Run PersonalizationAgent</strong> — generates subject + body
+for this lead + step</li>
+<li><strong>Create Message record</strong> —
+status=<code>"draft"</code>, <code>ai_generated=true</code></li>
+<li><strong>Schedule next FollowUp</strong> — creates
+<code>follow_ups</code> record with
+<code>scheduled_at = now() + delay_days</code></li>
+<li><strong>Dispatch <code>send_email</code> task</strong> — auto-queues
+draft for immediate delivery</li>
+</ol>
+<h3 id="email-delivery-send_email-task">Email Delivery
+(<code>send_email</code> task)</h3>
+<ol type="1">
+<li>Resolves recipient email from message record → contact →
+fallback</li>
+<li>Resolves sender from <code>SenderAccount</code> or environment
+defaults</li>
+<li>Sends via SendGrid API (HTML + plain text multipart)</li>
+<li>Records <code>X-Message-Id</code> for tracking</li>
+<li>Creates <code>EmailEvent</code> record
+(<code>event_type="sent"</code>)</li>
+<li>Sets <code>message.status = "sent"</code>,
+<code>message.sent_at = now()</code></li>
+</ol>
+<p><strong>Fallback behavior (no SendGrid key set):</strong> logs
+warning, assigns mock ID, marks sent — safe for local development.</p>
+<h3 id="follow-up-scheduling-process_follow_ups">Follow-Up Scheduling
+(<code>process_follow_ups</code>)</h3>
+<p>A periodic Celery beat task runs on the configured interval and: 1.
+Queries <code>follow_ups</code> table for
+<code>status="scheduled"</code> and
+<code>scheduled_at &lt;= now()</code> 2. For each due follow-up,
+dispatches <code>process_campaign_lead.delay(campaign_lead_id)</code> 3.
+Marks follow-up as <code>processed</code></p>
+<hr />
+<h2 id="orchestration-pipeline-control">11. Orchestration &amp; Pipeline
+Control</h2>
+<h3 id="celery-configuration">Celery Configuration</h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Broker</td>
+<td>Redis</td>
+</tr>
+<tr>
+<td>Task queues</td>
+<td><code>default</code>, <code>enrichment</code>,
+<code>email</code></td>
+</tr>
+<tr>
+<td>Enrichment queue</td>
+<td><code>run_enrichment_pipeline</code></td>
+</tr>
+<tr>
+<td>Max retries</td>
+<td>3 (enrichment), 3 (email)</td>
+</tr>
+<tr>
+<td>Retry delay</td>
+<td>60s (enrichment), 60s (email), 30s (campaign lead)</td>
+</tr>
+<tr>
+<td>Beat scheduler</td>
+<td><code>process_follow_ups</code> periodic task</td>
+</tr>
+</tbody>
+</table>
+<h3 id="enrichment-task-flow">Enrichment Task Flow</h3>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="at">@celery_app.task</span>(bind<span class="op">=</span><span class="va">True</span>, max_retries<span class="op">=</span><span class="dv">3</span>, queue<span class="op">=</span><span class="st">&quot;enrichment&quot;</span>)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> run_enrichment_pipeline(<span class="va">self</span>, lead_id, tenant_id, job_ids):</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="co"># job_ids = {&quot;web_research&quot;: &quot;uuid&quot;, &quot;company&quot;: &quot;uuid&quot;, &quot;scoring&quot;: &quot;uuid&quot;}</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Set lead enriching</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    lead.enrichment_status <span class="op">=</span> <span class="st">&quot;enriching&quot;</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Step 1 — Research</span></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    job_web_research.status <span class="op">=</span> <span class="st">&quot;running&quot;</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    research_output <span class="op">=</span> <span class="cf">await</span> ResearchAgent().run(company_name, domain, contact_name)</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    persist(ResearchData, AIInsight[research_summary])</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    job_web_research.status <span class="op">=</span> <span class="st">&quot;completed&quot;</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Step 2 — Enrichment</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    job_company.status <span class="op">=</span> <span class="st">&quot;running&quot;</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>    enrichment_output <span class="op">=</span> <span class="cf">await</span> EnrichmentAgent().run(raw_data, research_output)</span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    persist(EnrichmentData, AIInsight[company_enrichment])</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>    back_fill(company.industry, company.description, contact.department, contact.title)</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>    job_company.status <span class="op">=</span> <span class="st">&quot;completed&quot;</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Step 3 — Scoring</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>    job_scoring.status <span class="op">=</span> <span class="st">&quot;running&quot;</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>    score_output <span class="op">=</span> <span class="cf">await</span> ScoringAgent().run(lead_data, enrichment_output, research_output)</span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a>    persist(LeadScore, AIInsight[lead_score])</span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>    lead.status <span class="op">=</span> <span class="st">&quot;scored&quot;</span></span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>    job_scoring.status <span class="op">=</span> <span class="st">&quot;completed&quot;</span></span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Finalize</span></span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a>    lead.enrichment_status <span class="op">=</span> <span class="st">&quot;enriched&quot;</span></span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a>    lead.enriched_at <span class="op">=</span> now()</span></code></pre></div>
+<h3 id="error-handling">Error Handling</h3>
+<ul>
+<li>Each step catches exceptions independently — a failed research step
+does not block enrichment or scoring</li>
+<li>Failed jobs record <code>job.error = str(exception)</code> for
+debugging</li>
+<li>Pipeline-level failures trigger Celery retry up to 3 times with 60s
+delay</li>
+<li>All errors visible in the UI via the Enrichment tab on the Lead
+detail page</li>
+</ul>
+<hr />
+<h2 id="ai-infrastructure-model-configuration">12. AI Infrastructure
+&amp; Model Configuration</h2>
+<h3 id="llm-layer-baseagent">LLM Layer (<code>BaseAgent</code>)</h3>
+<p>All agents extend <code>BaseAgent</code> which provides three
+pre-configured LLM clients:</p>
+<table>
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 26%" />
+<col style="width: 42%" />
+</colgroup>
+<thead>
+<tr>
+<th>Method</th>
+<th>Model</th>
+<th>When Used</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>get_llm()</code></td>
+<td><code>claude-sonnet-4-6</code> (primary)</td>
+<td>Research, enrichment, scoring, personalization</td>
+</tr>
+<tr>
+<td><code>get_fast_llm()</code></td>
+<td><code>claude-sonnet-4-6</code> (fast model)</td>
+<td>Lightweight classification tasks</td>
+</tr>
+<tr>
+<td><code>get_fallback_llm()</code></td>
+<td><code>gpt-4o</code> / <code>gpt-4o-mini</code> (OpenAI)</td>
+<td>Fallback if Claude unavailable</td>
+</tr>
+</tbody>
+</table>
+<h3 id="retry-logic">Retry Logic</h3>
+<p><code>BaseAgent.invoke_with_retry()</code> wraps all LLM calls with:
+- <strong>3 attempts max</strong> - <strong>Exponential
+backoff:</strong> starts at 2s, max 30s</p>
+<h3 id="temperature-settings-by-task">Temperature Settings by Task</h3>
+<table>
+<thead>
+<tr>
+<th>Agent</th>
+<th>Temperature</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ResearchAgent</td>
+<td>0.3</td>
+<td>Some creativity for synthesis, but grounded</td>
+</tr>
+<tr>
+<td>EnrichmentAgent</td>
+<td>0.2</td>
+<td>Precision-focused, minimize hallucination</td>
+</tr>
+<tr>
+<td>ScoringAgent</td>
+<td>0.2</td>
+<td>Deterministic scoring, reproducible</td>
+</tr>
+<tr>
+<td>PersonalizationAgent</td>
+<td>~0.7</td>
+<td>Natural-sounding email copy</td>
+</tr>
+</tbody>
+</table>
+<h3 id="output-parsing">Output Parsing</h3>
+<p>All agents use LangChain’s <code>JsonOutputParser</code> to enforce
+structured output. If parsing fails, the raw response is logged and the
+job is marked failed.</p>
+<h3 id="cost-tracking">Cost Tracking</h3>
+<p><code>EnrichmentJob</code> records <code>tokens_used</code> and
+<code>cost_usd</code> per job — enabling per-lead and aggregate cost
+analysis. (Currently populated by agent responses where token counts are
+available.)</p>
+<hr />
+<h2 id="business-logic-icp-assumptions">13. Business Logic &amp; ICP
+Assumptions</h2>
+<h3 id="ideal-customer-profile-icp">Ideal Customer Profile (ICP)</h3>
+<p>LaunchHouse Events targets organizations that: 1. <strong>Use
+Cvent</strong> — or are actively evaluating event tech that includes
+Cvent 2. <strong>Run B2B events</strong> — corporate events,
+conferences, trade shows, summits, product launches 3. <strong>Have
+dedicated event staff</strong> — 1+ event manager/coordinator who builds
+in Cvent 4. <strong>Experience capacity constraints</strong> — their
+in-house team can’t handle all builds, especially during peak periods or
+for complex configurations 5. <strong>Are mid-market to
+enterprise</strong> — typically 50–5,000 employees; too large for DIY,
+too small / budget-conscious for full-retainer agencies</p>
+<h3 id="vertical-priority-incorporated-into-scoring">Vertical Priority
+(incorporated into scoring)</h3>
+<p>High-fit verticals (companies in these sectors run the most
+Cvent-powered events): - Technology / SaaS (conferences, summits, user
+days) - Financial Services (investor events, roadshows, compliance
+training) - Pharmaceutical / Healthcare (HCP educational events,
+congresses) - Associations &amp; Nonprofits (annual conferences, chapter
+events) - Professional Services (client events, thought leadership
+forums)</p>
+<h3 id="contact-persona-priority">Contact Persona Priority</h3>
+<table>
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 24%" />
+<col style="width: 48%" />
+</colgroup>
+<thead>
+<tr>
+<th>Persona</th>
+<th>Titles</th>
+<th>Why They Matter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Events Lead</strong> (primary)</td>
+<td>Head of Events, Director of Events, VP Events</td>
+<td>Owns Cvent, selects vendors, direct budget</td>
+</tr>
+<tr>
+<td><strong>Marketing Ops</strong></td>
+<td>Marketing Operations Manager, Director of Demand Gen</td>
+<td>Often manages Cvent license/integration</td>
+</tr>
+<tr>
+<td><strong>IT / Procurement</strong></td>
+<td>IT Director, Technology Manager</td>
+<td>Cvent platform owner in large orgs</td>
+</tr>
+<tr>
+<td><strong>C-Suite</strong></td>
+<td>CMO, COO</td>
+<td>Final sign-off, especially SMB</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cvent-specific-signal-scoring-logic">Cvent-Specific Signal
+Scoring Logic</h3>
+<p>The “Event Usage (Cvent)” signal (weight: 10%) scores highest when: -
+Company is listed as Cvent customer/case study - Contact is active in
+the Cvent Community forums - Job postings mention “Cvent” as required
+skill - Public event registration pages are Cvent-powered
+(cvent.com/events/…) - Company attended Cvent Connect (Cvent’s annual
+conference)</p>
+<h3 id="upcoming-event-priority-logic">“Upcoming Event” Priority
+Logic</h3>
+<p>The most commercially valuable trigger is an upcoming event —
+especially in the <strong>31–120 day window</strong> (T8 template). This
+is because: - Event builds in Cvent take 2–8 weeks for anything
+non-trivial - The 31–120 day window is when the decision to outsource
+gets made - Inside 30 days → rush work only (scoped differently, T7) -
+Past 120 days → pipeline nurture, not urgency-based close (T5)</p>
+<hr />
+<h2 id="scoring-reference-card">14. Scoring Reference Card</h2>
+<h3 id="quick-lookup-signal-weights">Quick Lookup — Signal Weights</h3>
+<pre><code>┌─────────────────────────────────────────────────────────┐
+│               SCORING SIGNAL WEIGHTS                    │
+├─────────────────────────────────── ────────────┬────────┤
+│ Company Size Fit                               │  15%  │
+│ Title / Seniority Fit                          │  15%  │
+│ Industry Fit                                   │  12%  │
+│ Recent Activity Signals                        │  12%  │
+│ Technology Fit                                 │  10%  │
+│ Event Usage (Cvent)                            │  10%  │
+│ Funding / Growth                               │   8%  │
+│ Engagement History                             │   8%  │
+│ Timing Signals                                 │   5%  │
+│ Geographic Fit                                 │   5%  │
+├────────────────────────────────────────────────┴────────┤
+│ TOTAL                                          │ 100%  │
+└─────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="tier-color-reference">Tier Color Reference</h3>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Score</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🔴 Hot</td>
+<td>≥ 75</td>
+<td>Prioritize — direct sales motion</td>
+</tr>
+<tr>
+<td>🟡 Warm</td>
+<td>50–74</td>
+<td>Personalized nurture sequence</td>
+</tr>
+<tr>
+<td>🔵 Cold</td>
+<td>&lt; 50</td>
+<td>Low-touch future nurture or skip</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="template-reference-card">15. Template Reference Card</h2>
+<h3 id="template-selection-quick-reference">Template Selection Quick
+Reference</h3>
+<pre><code>Situation                          → Template
+─────────────────────────────────────────────────────
+Positive reply                     → T10
+&quot;Send more info&quot; reply             → T11
+&quot;Not now / later&quot; reply            → T12
+&quot;Already have vendor&quot; reply        → T13
+Wrong contact                      → T14
+─────────────────────────────────────────────────────
+Event verified, WITHIN 30 days     → T7 (Rush)
+Event verified, 31-120 days        → T8 (Build — best)
+Event verified, 120+ days/past     → T5 (Event trigger)
+News ≤45 days + events             → T9 (News trigger)
+Activity inferable, no event/news  → T6 (Fit-based)
+─────────────────────────────────────────────────────
+Step 1 (no other context)          → T1 (Initial)
+Step 2 (no reply yet)              → T2 (Value add)
+Step 3 (no reply yet)              → T3 (Bump)
+Step 4 (no reply yet)              → T4 (Break-up)
+─────────────────────────────────────────────────────
+Post-voicemail (&lt;30 min)           → T15
+Meeting booked (immediate)         → T16
+Post-call (&lt;2 hours)               → T17</code></pre>
+<h3 id="core-sequence-timing">Core Sequence Timing</h3>
+<pre><code>Day 0: T1 — Initial Outreach
+Day 4: T2 — Value Add Follow-Up
+Day 9: T3 — Bump (&quot;worth a reply?&quot;)
+Day 20: T4 — Break-Up (→ moves to 90-day nurture)</code></pre>
+<p><strong>Suppression:</strong> 90 days after T4 before new sequence.
+Max 4 emails per sequence.</p>
+<hr />
+<h2 id="current-limitations">16. Current Limitations</h2>
+<h3 id="research-quality">Research Quality</h3>
+<ul>
+<li><strong>Live web search is active.</strong> Tavily is the primary
+provider (4–5 queries per lead), with Firecrawl search as fallback and
+Firecrawl homepage scrape always running when a domain is
+available.</li>
+<li><strong>Knowledge recency depends on Tavily index
+freshness.</strong> Very recently published pages (hours old) may not
+yet be indexed.</li>
+<li><strong>No direct Cvent event calendar API.</strong> Upcoming events
+are found via web search results and homepage scrapes, not by querying
+Cvent’s platform directly.</li>
+</ul>
+<h3 id="scoring-accuracy">Scoring Accuracy</h3>
+<ul>
+<li>Heavy dependence on title/industry classification from raw data or
+enrichment output</li>
+<li>Engagement History signal (8%) is mostly 0 for new leads with no
+prior interaction</li>
+<li>Geographic Fit uses coarse inference (company location from
+<code>contact.location</code> or <code>company.location</code>)</li>
+</ul>
+<h3 id="personalization">Personalization</h3>
+<ul>
+<li>Token filling is LLM-generated — hallucinated event names or news
+are possible (especially with stubs returning nothing)</li>
+<li><code>{{days_out}}</code> calculation requires structured
+<code>events_attended</code> data with accurate future dates — quality
+depends on research accuracy</li>
+</ul>
+<h3 id="email-infrastructure">Email Infrastructure</h3>
+<ul>
+<li><code>message.message_id</code> field is reused (dual-purpose:
+stores recipient email during draft creation, then overwritten with
+SendGrid message ID post-send) — a technical debt item</li>
+<li>Reply classification (<code>intent</code> field on
+<code>Reply</code> model) is currently set externally — no automated
+reply parsing is implemented in the current codebase</li>
+</ul>
+<hr />
+<h2 id="future-enhancements">17. Future Enhancements</h2>
+<h3 id="high-priority">High Priority</h3>
+<ol type="1">
+<li><strong>Live web search integration</strong> ✅ <em>Completed April
+2026</em>
+<ul>
+<li>Tavily (primary) and Firecrawl (fallback + homepage scrape) are
+wired and live</li>
+<li>Remaining: real-time Cvent.com event calendar scraping via direct
+API</li>
+<li>Remaining: LinkedIn Sales Navigator API for contact
+verification</li>
+</ul></li>
+<li><strong>Automated reply classification</strong>
+<ul>
+<li>NLP pipeline to parse inbound replies and set <code>intent</code>
+automatically</li>
+<li>Categories: positive, not-now (with timeframe extraction),
+wrong-contact, unsubscribe, question, bounce</li>
+<li>Would enable fully automated campaign branching without human
+review</li>
+</ul></li>
+<li><strong>Custom scoring profiles</strong>
+<ul>
+<li>Allow per-tenant or per-campaign signal weight customization</li>
+<li>Enable vertical-specific profiles (e.g., different weights for
+Pharma vs. SaaS)</li>
+</ul></li>
+<li><strong>Cvent Connect attendee data</strong>
+<ul>
+<li>Direct integration with Cvent’s attendee export for event
+participant verification</li>
+<li>Would elevate Event Usage signal accuracy significantly</li>
+</ul></li>
+</ol>
+<h3 id="medium-priority">Medium Priority</h3>
+<ol start="5" type="1">
+<li><strong>A/B template testing</strong>
+<ul>
+<li>Track open/reply rates per template variant</li>
+<li>Automated winning variant selection</li>
+<li>Long-form vs. short-form performance tracking</li>
+</ul></li>
+<li><strong>ICP profile refinement loop</strong>
+<ul>
+<li>Feed back won/converted leads to refine scoring weights</li>
+<li>Automatic weight adjustment based on conversion data</li>
+</ul></li>
+<li><strong>Enrichment refresh scheduling</strong>
+<ul>
+<li>Auto-re-enrich leads after 90 days</li>
+<li>Trigger re-enrichment on company funding news, leadership change, or
+job posting activity</li>
+</ul></li>
+<li><strong>Multi-sender rotation</strong>
+<ul>
+<li>Assign leads across multiple <code>SenderAccount</code> records for
+volume scaling</li>
+<li>Warmup tracking per sender domain</li>
+</ul></li>
+</ol>
+<h3 id="lower-priority">Lower Priority</h3>
+<ol start="9" type="1">
+<li><strong>LinkedIn outreach channel</strong>
+<ul>
+<li>Extend <code>Message</code> model to support LinkedIn DMs alongside
+email</li>
+<li>Coordinated multi-channel sequences</li>
+</ul></li>
+<li><strong>Webhook-based real-time triggers</strong>
+<ul>
+<li>Cvent webhook for registration spike detection mid-sequence</li>
+<li>HubSpot/Salesforce synced enrichment for CRM-first workflows</li>
+</ul></li>
+<li><strong>Custom field scoring rules</strong>
+<ul>
+<li>Allow admins to define scoring logic for <code>custom_fields</code>
+data</li>
+<li>E.g., “if custom_field.cvent_tier = ‘enterprise’, add 10 points to
+Event Usage signal”</li>
+</ul></li>
+</ol>
+<hr />
+<p><em>Document generated from source code analysis. Last updated: April
+25, 2026.</em><br />
+<em>Backend: <code>backend/app/agents/</code>,
+<code>backend/app/tasks/</code>,
+<code>backend/app/models/lead.py</code>,
+<code>backend/app/tools/web_search.py</code></em></p>
+</body>
+</html>

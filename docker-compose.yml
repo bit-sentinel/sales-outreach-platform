@@ -1,0 +1,179 @@
+# ──────────────────────────────────────────────────────────
+# OutreachAI – Docker Compose (Development)
+# ──────────────────────────────────────────────────────────
+# Usage:
+#   docker compose up -d          # Start all services
+#   docker compose logs -f api    # Tail API logs
+#   docker compose down            # Stop & remove containers (data preserved)
+#   docker compose down -v        # ⚠️  DANGER: also deletes all volumes/data
+
+services:
+  # ── PostgreSQL + PGVector ────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: outreachai-postgres
+    environment:
+      POSTGRES_USER: outreach
+      POSTGRES_PASSWORD: outreach
+      POSTGRES_DB: outreachai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U outreach -d outreachai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: outreachai-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend API ──────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      target: base
+    container_name: outreachai-api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://outreach:outreach@postgres:5432/outreachai
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - SECRET_KEY=dev-secret-key-change-in-production-min-32-chars
+      - ENVIRONMENT=development
+      - DEBUG=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Celery Worker (default + enrichment) ─────────────────
+  celery-worker:
+    build:
+      context: ./backend
+      target: base
+    container_name: outreachai-celery-worker
+    command: celery -A app.celery_app worker -l info -Q default,enrichment,ai -c 4
+    volumes:
+      - ./backend:/app
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://outreach:outreach@postgres:5432/outreachai
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - SECRET_KEY=dev-secret-key-change-in-production-min-32-chars
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Celery Worker (email) ────────────────────────────────
+  celery-email-worker:
+    build:
+      context: ./backend
+      target: base
+    container_name: outreachai-celery-email
+    command: celery -A app.celery_app worker -l info -Q email,campaign -c 2
+    volumes:
+      - ./backend:/app
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://outreach:outreach@postgres:5432/outreachai
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - SECRET_KEY=dev-secret-key-change-in-production-min-32-chars
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Celery Beat (scheduler) ──────────────────────────────
+  celery-beat:
+    build:
+      context: ./backend
+      target: base
+    container_name: outreachai-celery-beat
+    command: celery -A app.celery_app beat -l info -s /tmp/celerybeat-schedule
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://outreach:outreach@postgres:5432/outreachai
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - SECRET_KEY=dev-secret-key-change-in-production-min-32-chars
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ── Frontend ─────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: deps
+    container_name: outreachai-frontend
+    command: npm run dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - INTERNAL_API_URL=http://api:8000
+
+  # ── Flower (Celery monitoring) ───────────────────────────
+  flower:
+    build:
+      context: ./backend
+      target: base
+    container_name: outreachai-flower
+    command: celery -A app.celery_app flower --port=5555
+    volumes:
+      - ./backend:/app
+    ports:
+      - "5555:5555"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://outreach:outreach@postgres:5432/outreachai
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - SECRET_KEY=dev-secret-key-change-in-production-min-32-chars
+    depends_on:
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:

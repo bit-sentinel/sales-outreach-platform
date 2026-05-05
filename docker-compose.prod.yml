@@ -1,0 +1,165 @@
+# ──────────────────────────────────────────────────────────
+# OutreachAI – Docker Compose (Production)
+# ──────────────────────────────────────────────────────────
+# Always use --env-file .env.prod so ${POSTGRES_*} vars resolve:
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f api
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod down
+# Or use deploy.sh which handles this automatically.
+
+services:
+
+  # ── Caddy (reverse proxy + auto HTTPS) ──────────────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: outreachai-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - frontend
+
+  # ── PostgreSQL + PGVector ────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: outreachai-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: outreachai-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend API ──────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      target: production
+    container_name: outreachai-api
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - ENVIRONMENT=production
+      - DEBUG=false
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    group_add:
+      - "988"  # host docker GID — allows appuser to read the Docker socket
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Celery Worker (all queues merged) ───────────────────
+  # Handles: default, enrichment, ai, email, campaign
+  celery-worker:
+    build:
+      context: ./backend
+      target: production
+    container_name: outreachai-celery-worker
+    restart: unless-stopped
+    command: celery -A app.celery_app worker -l info -Q default,enrichment,ai,email,campaign -c 4
+    env_file: .env.prod
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - ENVIRONMENT=production
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.celery_app inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── Celery Beat (scheduler) ──────────────────────────────
+  celery-beat:
+    build:
+      context: ./backend
+      target: production
+    container_name: outreachai-celery-beat
+    restart: unless-stopped
+    command: celery -A app.celery_app beat -l info -s /tmp/celerybeat-schedule
+    env_file: .env.prod
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - ENVIRONMENT=production
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/celerybeat-schedule || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ── Frontend (Next.js standalone) ────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      target: runner
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME:-OutreachAI}
+        - INTERNAL_API_URL=http://api:8000
+    container_name: outreachai-frontend
+    restart: unless-stopped
+    env_file: .env.prod
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ > /dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:
+  caddy_data:
+  caddy_config:
+  celerybeat_data:

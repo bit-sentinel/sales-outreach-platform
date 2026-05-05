@@ -1,0 +1,142 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-worker
+  namespace: outreachai
+  labels:
+    app: celery-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: celery-worker
+  template:
+    metadata:
+      labels:
+        app: celery-worker
+    spec:
+      containers:
+        - name: celery-worker
+          image: outreachai/api:latest
+          command:
+            - celery
+            - -A
+            - app.celery_app
+            - worker
+            - -Q
+            - default,enrichment,ai
+            - --loglevel=info
+            - --concurrency=4
+          envFrom:
+            - configMapRef:
+                name: api-config
+            - secretRef:
+                name: api-secrets
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-email-worker
+  namespace: outreachai
+  labels:
+    app: celery-email-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: celery-email-worker
+  template:
+    metadata:
+      labels:
+        app: celery-email-worker
+    spec:
+      containers:
+        - name: celery-email-worker
+          image: outreachai/api:latest
+          command:
+            - celery
+            - -A
+            - app.celery_app
+            - worker
+            - -Q
+            - email,campaign
+            - --loglevel=info
+            - --concurrency=2
+          envFrom:
+            - configMapRef:
+                name: api-config
+            - secretRef:
+                name: api-secrets
+          resources:
+            requests:
+              cpu: 125m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-beat
+  namespace: outreachai
+  labels:
+    app: celery-beat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: celery-beat
+  template:
+    metadata:
+      labels:
+        app: celery-beat
+    spec:
+      containers:
+        - name: celery-beat
+          image: outreachai/api:latest
+          command:
+            - celery
+            - -A
+            - app.celery_app
+            - beat
+            - --loglevel=info
+          envFrom:
+            - configMapRef:
+                name: api-config
+            - secretRef:
+                name: api-secrets
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: celery-worker-hpa
+  namespace: outreachai
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: celery-worker
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 75
