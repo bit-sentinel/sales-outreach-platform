@@ -179,6 +179,77 @@ class ReplyRespondRequest(BaseModel):
 
 # ── Sender Account ──────────────────────────────────
 
+# ── Campaign Report ─────────────────────────────────
+
+class ReportReply(BaseModel):
+    id: uuid.UUID
+    received_at: datetime
+    subject: str | None
+    body_text: str | None
+    body_html: str | None
+    intent: str | None
+    sentiment: str | None
+    responded_at: datetime | None
+    response_body: str | None  # body of the outbound reply we sent back
+
+
+class ReportMessage(BaseModel):
+    id: uuid.UUID
+    sequence_step: int | None
+    step_label: str  # "Initial", "Follow-up 1", "Follow-up 2", etc.
+    subject: str | None
+    body_html: str | None
+    body_text: str | None
+    status: str
+    sent_at: datetime | None
+    ai_generated: bool
+    replies: list[ReportReply]
+
+
+class ReportLead(BaseModel):
+    lead_id: uuid.UUID
+    name: str | None
+    email: str | None
+    effective_email: str | None  # overridden email in test mode
+    company: str | None
+    title: str | None
+    campaign_status: str
+    messages: list[ReportMessage]
+
+
+class CampaignReportSequenceStep(BaseModel):
+    step: int
+    delay_days: int
+    channel: str
+    subject_template: str | None
+    ai_generate: bool
+
+
+class CampaignReport(BaseModel):
+    id: uuid.UUID
+    name: str
+    description: str | None
+    status: str
+    campaign_type: str
+    vertical: str | None
+    test_mode_enabled: bool
+    test_emails: list[str]
+    from_email: str | None
+    from_name: str | None
+    created_at: datetime
+    launched_at: datetime | None
+    completed_at: datetime | None
+    total_leads: int
+    sent_count: int
+    open_count: int
+    reply_count: int
+    bounce_count: int
+    sequence: list[CampaignReportSequenceStep]
+    leads: list[ReportLead]
+
+
+# ── Sender Account ─────────────────────────────────
+
 class SenderAccountCreate(BaseModel):
     email: str
     display_name: str

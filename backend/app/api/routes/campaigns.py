@@ -12,6 +12,7 @@ from app.schemas.campaign import (
     CampaignAddLeads,
     CampaignCreate,
     CampaignDetailResponse,
+    CampaignReport,
     CampaignResponse,
     CampaignUpdate,
     MessageDraftResponse,
@@ -381,4 +382,20 @@ async def advance_campaign_leads(
         dispatched += 1
 
     return APIResponse(data={"dispatched": dispatched, "campaign_id": str(campaign_id)})
+
+
+# ── Campaign Report ────────────────────────────────────────────────────────────
+
+@router.get("/{campaign_id}/report", response_model=APIResponse[CampaignReport])
+async def get_campaign_report(
+    campaign_id: uuid.UUID,
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return a comprehensive report for a single campaign."""
+    svc = CampaignService(db, tenant_id)
+    report = await svc.get_campaign_report(campaign_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    return APIResponse(data=report)
 

@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Archive, BarChart2, Clock, Loader2, Mail, MoreHorizontal, Pause, Play, Plus, Sparkles, Target, Zap } from 'lucide-react';
+import { Archive, BarChart2, Clock, FileText, Loader2, Mail, MoreHorizontal, Pause, Play, Plus, Sparkles, Target, Zap } from 'lucide-react';
 import { api, type PaginatedData } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
 import { NewCampaignModal } from '@/components/campaigns/new-campaign-modal';
 import { CampaignDraftsPanel } from '@/components/campaigns/campaign-drafts-panel';
+import { CampaignReportPanel } from '@/components/campaigns/campaign-report-panel';
 
 interface Campaign {
   id: string;
@@ -68,6 +69,7 @@ export default function CampaignsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [draftPanel, setDraftPanel] = useState<{ id: string; name: string } | null>(null);
+  const [reportPanel, setReportPanel] = useState<{ id: string; name: string } | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   useEffect(() => {
@@ -411,6 +413,12 @@ export default function CampaignsPage() {
                     >
                       <Mail className="h-3.5 w-3.5" /> Review
                     </button>
+                    <button
+                      onClick={() => setReportPanel({ id: campaign.id, name: campaign.name })}
+                      className="flex items-center gap-1.5 rounded-lg border border-[#1c8ed4]/25 bg-[#1c8ed4]/10 px-2.5 py-1.5 text-[11px] font-semibold text-[#5bb8f5] transition-colors hover:bg-[#1c8ed4]/20"
+                    >
+                      <FileText className="h-3.5 w-3.5" /> Report
+                    </button>
                     {campaign.status === 'active' ? (
                       <button
                         disabled={busy || progress === 100}
@@ -450,6 +458,14 @@ export default function CampaignsPage() {
         onClose={() => setShowCreate(false)}
         onCreated={fetchCampaigns}
       />
+
+      {reportPanel && (
+        <CampaignReportPanel
+          campaignId={reportPanel.id}
+          campaignName={reportPanel.name}
+          onClose={() => setReportPanel(null)}
+        />
+      )}
 
       {draftPanel && (() => {
         const c = campaigns.find((c) => c.id === draftPanel.id);
