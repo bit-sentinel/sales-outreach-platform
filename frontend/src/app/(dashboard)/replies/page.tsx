@@ -34,6 +34,7 @@ interface ReplyThread {
   campaign_name: string | null;
   campaign_sent_count: number | null;
   responded_at: string | null;
+  response_body: string | null;
 }
 
 interface CampaignGroup {
@@ -311,7 +312,7 @@ function CampaignDetail({ group, onSelectReply }: {
 
 // ── ThreadView (right panel: reply selected) ─────────────────────────────────
 
-function ThreadView({ reply, onBack, onArchive, showOutbound, setShowOutbound, showReplyBox, setShowReplyBox, replyText, setReplyText, onGenerateReply, onBookMeeting, setToast, onReplySent }: {
+function ThreadView({ reply, onBack, onArchive, showOutbound, setShowOutbound, showReplyBox, setShowReplyBox, replyText, setReplyText, onGenerateReply, onBookMeeting, setToast, onReplySent, onReplyUpdated }: {
   reply: ReplyThread;
   onBack: () => void;
   onArchive: (r: ReplyThread) => void;
@@ -325,6 +326,7 @@ function ThreadView({ reply, onBack, onArchive, showOutbound, setShowOutbound, s
   onBookMeeting: () => void;
   setToast: (v: string) => void;
   onReplySent: () => void;
+  onReplyUpdated: (updated: ReplyThread) => void;
 }) {
   const [sending, setSending] = useState(false);
   const cfg = getCfg(reply.intent);
@@ -410,6 +412,26 @@ function ThreadView({ reply, onBack, onArchive, showOutbound, setShowOutbound, s
           </p>
         </div>
 
+        {/* Sent response thread entry */}
+        {reply.responded_at && (
+          <div className="border-t border-white/[0.06] px-5 py-4 bg-emerald-500/[0.04]">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20">
+                <Reply className="h-3 w-3 text-emerald-400" />
+              </div>
+              <span className="text-[11px] font-bold text-emerald-300">You replied</span>
+              <span className="text-[10px] text-white/30">{relTime(reply.responded_at)}</span>
+            </div>
+            {reply.response_body ? (
+              <p className="whitespace-pre-line ml-8 text-sm leading-relaxed text-white/55">
+                {reply.response_body}
+              </p>
+            ) : (
+              <p className="ml-8 text-xs text-white/30 italic">Reply sent (content not stored)</p>
+            )}
+          </div>
+        )}
+
         {/* Compose box */}
         {showReplyBox && (
           <div className="border-t border-white/[0.06] px-5 py-4 space-y-3">
@@ -430,7 +452,9 @@ function ThreadView({ reply, onBack, onArchive, showOutbound, setShowOutbound, s
                     await api({ method: 'POST', url: `/replies/${reply.id}/respond`, data: { body_text: replyText } });
                     setToast('Reply sent successfully');
                     setShowReplyBox(false);
+                    const sentText = replyText;
                     setReplyText('');
+                    onReplyUpdated({ ...reply, responded_at: new Date().toISOString(), response_body: sentText });
                     onReplySent();
                   } catch {
                     setToast('Failed to send reply. Please try again.');
@@ -755,6 +779,10 @@ export default function RepliesPage() {
                 onBookMeeting={() => setToast('Book Meeting: connect your calendar integration to enable this action.')}
                 setToast={setToast}
                 onReplySent={load}
+                onReplyUpdated={(updated) => {
+                  setSelectedReply(updated);
+                  setReplies((prev) => prev.map((r) => r.id === updated.id ? updated : r));
+                }}
               />
             ) : selectedGroupForDisplay ? (
               <CampaignDetail

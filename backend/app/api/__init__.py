@@ -14,6 +14,7 @@ from app.api.routes.analytics import router as analytics_router
 from app.api.routes.admin import router as admin_router
 from app.api.routes.chat import router as chat_router
 from app.api.routes.system import router as system_router
+from app.api.routes.webhooks import router as webhooks_router
 
 router = APIRouter()
 
@@ -29,3 +30,4 @@ router.include_router(analytics_router, prefix="/analytics", tags=["Analytics"])
 router.include_router(admin_router, prefix="/admin", tags=["Admin"])
 router.include_router(system_router, prefix="/system", tags=["System"])
 router.include_router(chat_router, prefix="/chat", tags=["Chat"])
+router.include_router(webhooks_router, prefix="/webhooks", tags=["Webhooks"])

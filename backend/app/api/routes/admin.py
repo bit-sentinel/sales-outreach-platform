@@ -25,12 +25,18 @@ class SenderAccountCreate(BaseModel):
     display_name: str = Field(min_length=1, max_length=100)
     provider: str = Field(pattern="^(gmail|sendgrid|ses|smtp)$")
     daily_limit: int = Field(default=150, ge=1, le=2000)
+    imap_host: str | None = None
+    imap_user: str | None = None
+    imap_password: str | None = None
 
 
 class SenderAccountUpdate(BaseModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=100)
     daily_limit: int | None = Field(default=None, ge=1, le=2000)
     is_active: bool | None = None
+    imap_host: str | None = None
+    imap_user: str | None = None
+    imap_password: str | None = None
 
 
 class UserInviteRequest(BaseModel):
@@ -83,6 +89,9 @@ async def list_sender_accounts(
             "health_score": round(r.health_score * 100),
             "last_health_check": r.last_health_check.isoformat() if r.last_health_check else None,
             "created_at": r.created_at.isoformat(),
+            "imap_host": r.imap_host,
+            "imap_user": r.imap_user,
+            "has_imap": bool(r.imap_user and r.imap_password),
         }
         for r in rows
     ])
@@ -100,6 +109,9 @@ async def create_sender_account(
         display_name=body.display_name,
         provider=body.provider,
         daily_limit=body.daily_limit,
+        imap_host=body.imap_host or None,
+        imap_user=body.imap_user or None,
+        imap_password=body.imap_password or None,
     )
     db.add(acct)
     await db.commit()
@@ -116,6 +128,9 @@ async def create_sender_account(
         "health_score": round(acct.health_score * 100),
         "last_health_check": None,
         "created_at": acct.created_at.isoformat(),
+        "imap_host": acct.imap_host,
+        "imap_user": acct.imap_user,
+        "has_imap": bool(acct.imap_user and acct.imap_password),
     })
 
 
@@ -140,6 +155,12 @@ async def update_sender_account(
         acct.daily_limit = body.daily_limit
     if body.is_active is not None:
         acct.is_active = body.is_active
+    if body.imap_host is not None:
+        acct.imap_host = body.imap_host or None
+    if body.imap_user is not None:
+        acct.imap_user = body.imap_user or None
+    if body.imap_password is not None:
+        acct.imap_password = body.imap_password or None
     await db.commit()
     return APIResponse(message="Updated")
 

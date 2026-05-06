@@ -22,6 +22,10 @@ class SenderAccount(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
     provider: Mapped[str] = mapped_column(String(50), nullable=False)  # gmail, sendgrid, ses
     credentials_encrypted: Mapped[str | None] = mapped_column(Text)
     daily_limit: Mapped[int] = mapped_column(Integer, server_default="50")
+    # IMAP credentials for reply polling
+    imap_host: Mapped[str | None] = mapped_column(String(255))
+    imap_user: Mapped[str | None] = mapped_column(String(255))
+    imap_password: Mapped[str | None] = mapped_column(Text)
     sent_today: Mapped[int] = mapped_column(Integer, server_default="0")
     warmup_stage: Mapped[int] = mapped_column(Integer, server_default="0")
     is_active: Mapped[bool] = mapped_column(Boolean, server_default="true")
@@ -203,6 +207,7 @@ class Reply(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
     priority: Mapped[str] = mapped_column(String(20), server_default="medium")
     is_read: Mapped[bool] = mapped_column(Boolean, server_default="false")
     responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    response_body: Mapped[str | None] = mapped_column(Text)
 
 
 class SuppressionList(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):

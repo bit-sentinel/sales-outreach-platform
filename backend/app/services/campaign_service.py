@@ -380,7 +380,7 @@ class CampaignService:
                         intent=r.intent,
                         sentiment=r.sentiment,
                         responded_at=r.responded_at,
-                        response_body=r.suggested_response if r.responded_at else None,
+                        response_body=r.response_body,
                     ))
                 report_messages.append(ReportMessage(
                     id=m.id,

@@ -155,6 +155,7 @@ class ReplyResponse(BaseModel):
     suggested_response: str | None
     created_at: datetime
     responded_at: datetime | None
+    response_body: str | None = None
     # Enriched – populated by the route handler
     contact_name: str | None = None
     company_name: str | None = None

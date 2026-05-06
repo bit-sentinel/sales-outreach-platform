@@ -186,6 +186,9 @@ type SenderAccount = {
   sent_today: number;
   is_active: boolean;
   health_score: number;
+  imap_host: string | null;
+  imap_user: string | null;
+  has_imap: boolean;
 };
 
 function EmailTab() {
@@ -196,6 +199,9 @@ function EmailTab() {
   const [addName, setAddName] = useState('');
   const [addProvider, setAddProvider] = useState('gmail');
   const [addLimit, setAddLimit] = useState('150');
+  const [addImapHost, setAddImapHost] = useState('');
+  const [addImapUser, setAddImapUser] = useState('');
+  const [addImapPassword, setAddImapPassword] = useState('');
   const [addSaving, setAddSaving] = useState(false);
   const [addError, setAddError] = useState('');
 
@@ -215,8 +221,13 @@ function EmailTab() {
     try {
       await api({ method: 'POST', url: '/admin/sender-accounts', data: {
         email: addEmail, display_name: addName, provider: addProvider, daily_limit: parseInt(addLimit),
+        imap_host: addImapHost || null,
+        imap_user: addImapUser || addEmail || null,
+        imap_password: addImapPassword || null,
       }});
-      setShowAdd(false); setAddEmail(''); setAddName(''); setAddProvider('gmail'); setAddLimit('150');
+      setShowAdd(false);
+      setAddEmail(''); setAddName(''); setAddProvider('gmail'); setAddLimit('150');
+      setAddImapHost(''); setAddImapUser(''); setAddImapPassword('');
       await load();
     } catch (err: unknown) {
       const detail = (err as any)?.response?.data?.detail;
@@ -274,6 +285,24 @@ function EmailTab() {
                 <input type="number" className={inputCls} value={addLimit} onChange={e => setAddLimit(e.target.value)} />
               </div>
             </div>
+            {/* IMAP section */}
+            <div className="border-t border-white/[0.07] pt-3">
+              <p className="text-xs font-semibold text-white/50 mb-2">IMAP credentials <span className="font-normal text-white/30">(for reply polling — optional but recommended)</span></p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-white/40 mb-1">IMAP host</label>
+                  <input className={inputCls} placeholder="imap.gmail.com" value={addImapHost} onChange={e => setAddImapHost(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-white/40 mb-1">IMAP username</label>
+                  <input className={inputCls} placeholder="same as email" value={addImapUser} onChange={e => setAddImapUser(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-white/40 mb-1">App password</label>
+                  <input type="password" className={inputCls} placeholder="••••••••••••••••" value={addImapPassword} onChange={e => setAddImapPassword(e.target.value)} />
+                </div>
+              </div>
+            </div>
             {addError && <p className="text-xs text-rose-400">{addError}</p>}
             <div className="flex gap-2">
               <button onClick={handleAdd} disabled={addSaving || !addEmail || !addName} className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50 transition">
@@ -302,7 +331,13 @@ function EmailTab() {
                       {acct.is_active ? 'Active' : 'Paused'}
                     </span>
                   </div>
-                  <p className="text-xs text-white/40">{acct.email} · {acct.provider} · {acct.sent_today}/{acct.daily_limit} today</p>
+                  <p className="text-xs text-white/40">
+                    {acct.email} · {acct.provider} · {acct.sent_today}/{acct.daily_limit} today
+                    {acct.has_imap
+                      ? <span className="ml-2 text-emerald-400">● IMAP connected</span>
+                      : <span className="ml-2 text-amber-400/70">○ No IMAP</span>
+                    }
+                  </p>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <div className="flex items-center justify-end gap-1">

@@ -85,6 +85,8 @@ class Settings(BaseSettings):
     # IMAP credentials for background reply polling (check_replies beat task)
     gmail_imap_user: str = ""
     gmail_app_password: str = ""
+    # SendGrid Inbound Parse webhook secret (appended as ?secret= in webhook URL)
+    sendgrid_webhook_secret: str = ""
 
     # ── Celery ───────────────────────────────────────────
     celery_broker_url: str = "redis://localhost:6379/1"

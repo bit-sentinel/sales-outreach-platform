@@ -56,6 +56,7 @@ def _enrich(reply: Reply, contacts: dict, campaigns: dict, messages: dict) -> Re
         suggested_response=reply.suggested_response,
         created_at=reply.created_at,
         responded_at=reply.responded_at,
+        response_body=reply.response_body,
         contact_name=contact_name,
         company_name=company_name,
         ai_summary=ai_analysis.get("summary"),
@@ -242,6 +243,20 @@ async def respond_to_reply(
         select(Message).where(Message.id == reply.message_id)
     )).scalar_one_or_none()
 
+    # Check if campaign has test mode enabled → redirect to test email override
+    test_mode_override: str | None = None
+    if orig and orig.campaign_id:
+        from app.models.campaign import Campaign as _Campaign
+        campaign = (await db.execute(
+            select(_Campaign).where(_Campaign.id == orig.campaign_id)
+        )).scalar_one_or_none()
+        if campaign:
+            snap = (campaign.settings or {}).get("test_mode_snapshot", {})
+            if snap.get("enabled"):
+                enabled_emails = [e["email"] for e in snap.get("emails", []) if e.get("enabled")]
+                if enabled_emails:
+                    test_mode_override = enabled_emails[0]
+
     # Resolve recipient (the lead who replied)
     to_email: str | None = None
     lead = (await db.execute(select(Lead).where(Lead.id == reply.lead_id))).scalar_one_or_none()
@@ -249,6 +264,10 @@ async def respond_to_reply(
         contact = (await db.execute(select(Contact).where(Contact.id == lead.contact_id))).scalar_one_or_none()
         if contact:
             to_email = contact.email
+
+    # Use test email override if test mode is active
+    if test_mode_override:
+        to_email = test_mode_override
 
     if not to_email:
         raise HTTPException(status_code=422, detail="Cannot resolve recipient email for this lead")
@@ -313,6 +332,7 @@ async def respond_to_reply(
     ))
 
     reply.responded_at = now
+    reply.response_body = body_text
     await db.commit()
     return APIResponse(message="Reply sent")
 

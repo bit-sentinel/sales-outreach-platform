@@ -213,17 +213,16 @@ async def _check_replies_async():
     import email as email_lib
     import re
     from email.header import decode_header as _decode_header
-    from sqlalchemy import select
-    from app.models.campaign import Message, Reply, Campaign
+    from sqlalchemy import select, update
+    from app.models.campaign import Message, Reply, Campaign, CampaignLead, SenderAccount
     from app.models.lead import Lead, Contact
+    from app.models.tenant import Tenant
     from app.config import get_settings
 
     settings = get_settings()
-    if not settings.gmail_imap_user or not settings.gmail_app_password:
-        logger.debug("check_replies: GMAIL_IMAP_USER not configured, skipping")
-        return
-
     session_factory = _make_session_factory()
+
+    # ── Shared helpers ────────────────────────────────────────────────────────
 
     def _header_str(raw) -> str:
         parts = _decode_header(raw or "")
@@ -249,21 +248,9 @@ async def _check_replies_async():
                 return payload.decode(msg.get_content_charset() or "utf-8", errors="replace")
         return ""
 
-    try:
-        imap = imaplib.IMAP4_SSL("imap.gmail.com", 993)
-        imap.login(settings.gmail_imap_user, settings.gmail_app_password)
-        imap.select("INBOX")
-        status, data = imap.search(None, "UNSEEN")
-        if status != "OK" or not data[0]:
-            imap.logout()
-            return
-        msg_nums = data[0].split()
-    except Exception as exc:
-        logger.warning("check_replies: IMAP connect/search failed: %s", exc)
-        return
-
     async with session_factory() as db:
-        # Build email→lead lookup from real contact emails
+        # ── Build shared lookup tables (built once, used by all inboxes) ─────
+
         lead_rows = (await db.execute(select(Lead))).scalars().all()
         lead_by_id: dict = {l.id: l for l in lead_rows}
         contact_ids = [l.contact_id for l in lead_rows if l.contact_id]
@@ -278,12 +265,6 @@ async def _check_replies_async():
                 if c.email:
                     email_to_lead[c.email.lower()] = lead
 
-        # ── Test mode: build test-email set for fast lookup ───────────────────
-        # If any tenant has test mode enabled we also accept replies from their
-        # configured test email addresses and route them back to the real lead
-        # via the test_email_override stored on CampaignLead.personalization_data.
-        from app.models.campaign import CampaignLead
-        from app.models.tenant import Tenant
         test_email_set: set[str] = set()
         try:
             all_tenants = (await db.execute(select(Tenant))).scalars().all()
@@ -295,7 +276,6 @@ async def _check_replies_async():
         except Exception as _te_err:
             logger.warning("check_replies: test mode email set build failed (non-fatal): %s", _te_err)
 
-        # Build subject→message lookup (sent messages only)
         msg_rows = (await db.execute(
             select(Message).where(Message.status == "sent", Message.direction == "outbound")
         )).scalars().all()
@@ -304,163 +284,198 @@ async def _check_replies_async():
             if m.subject:
                 subject_to_message[m.subject.lower().strip()] = m
 
-        ingested_nums: list = []
-        for num in msg_nums:
+        # ── Build list of IMAP accounts to poll ───────────────────────────────
+        # Includes: global env-var account + all SenderAccounts with IMAP creds
+        inbox_list: list[dict] = []
+
+        if settings.gmail_imap_user and settings.gmail_app_password:
+            inbox_list.append({
+                "imap_host": "imap.gmail.com",
+                "imap_user": settings.gmail_imap_user,
+                "imap_password": settings.gmail_app_password,
+            })
+
+        sa_rows = (await db.execute(
+            select(SenderAccount).where(
+                SenderAccount.imap_user.isnot(None),
+                SenderAccount.imap_password.isnot(None),
+                SenderAccount.is_active == True,  # noqa: E712
+            )
+        )).scalars().all()
+
+        already_queued = {settings.gmail_imap_user.lower()} if settings.gmail_imap_user else set()
+        for sa in sa_rows:
+            if sa.imap_user and sa.imap_user.lower() not in already_queued:
+                inbox_list.append({
+                    "imap_host": sa.imap_host or "imap.gmail.com",
+                    "imap_user": sa.imap_user,
+                    "imap_password": sa.imap_password,
+                })
+                already_queued.add(sa.imap_user.lower())
+
+        if not inbox_list:
+            logger.debug("check_replies: no IMAP accounts configured, skipping")
+            return
+
+        # ── Poll each inbox ───────────────────────────────────────────────────
+        for inbox in inbox_list:
+            imap_host = inbox["imap_host"]
+            imap_user = inbox["imap_user"]
+            imap_password = inbox["imap_password"]
+
             try:
-                # BODY.PEEK[] fetches without marking the message as \Seen — we only
-                # mark it SEEN explicitly after a successful DB commit so that any
-                # failure mid-processing leaves the email UNSEEN for the next poll.
-                _, raw = imap.fetch(num, "(BODY.PEEK[])")
-                raw_bytes = raw[0][1] if raw and raw[0] else None
-                if not raw_bytes:
+                imap = imaplib.IMAP4_SSL(imap_host, 993)
+                imap.login(imap_user, imap_password)
+                imap.select("INBOX")
+                status, data = imap.search(None, "UNSEEN")
+                if status != "OK" or not data[0]:
+                    imap.logout()
+                    logger.info("check_replies: [%s] no unseen messages", imap_user)
                     continue
-                parsed = email_lib.message_from_bytes(raw_bytes)
-                from_raw = parsed.get("From", "")
-                from_email_match = re.search(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", from_raw, re.I)
-                if not from_email_match:
-                    continue
-                from_email = from_email_match.group(0).lower()
-
-                # Determine lead. Normal mode: look up by real contact email.
-                # Test mode: from_email is a test inbox — match by subject first,
-                # then resolve lead from the outbound message's lead_id.
-                is_test_reply = from_email in test_email_set
-                lead = email_to_lead.get(from_email) if not is_test_reply else None
-                if not lead and not is_test_reply:
-                    continue  # not a tracked lead
-
-                subject = _header_str(parsed.get("Subject", ""))
-
-                # Self-loop guard: when the test inbox is the same as the IMAP
-                # account (sam sends to sam), the original outbound email also
-                # lands in sam's inbox with FROM=sam. Skip it — only process
-                # genuine replies that carry a "Re:" prefix.
-                if is_test_reply and from_email == settings.gmail_imap_user.lower():
-                    if not re.match(r"^Re:\s*", subject, re.I):
-                        continue  # original sent email in own inbox, not a reply
-
-                # Strip "Re: " prefix(es) to find original subject
-                bare = re.sub(r"^(Re:\s*)+", "", subject, flags=re.I).strip()
-                orig_message = subject_to_message.get(bare.lower())
-                if not orig_message:
-                    orig_message = next(
-                        (v for k, v in subject_to_message.items() if bare.lower().startswith(k[:30])),
-                        None,
-                    )
-                if not orig_message:
-                    logger.info("check_replies: no outbound message matched subject '%s' — will retry", bare)
-                    continue
-
-                # In test mode, resolve lead from the outbound message instead of
-                # from_email, then verify the campaign_lead has the matching override.
-                if is_test_reply:
-                    lead = lead_by_id.get(orig_message.lead_id)
-                    if not lead:
-                        logger.info("check_replies: test reply — lead %s not found", orig_message.lead_id)
-                        continue
-                    # Safety check: confirm this lead was actually mapped to this test email
-                    try:
-                        cl_check = (await db.execute(
-                            select(CampaignLead).where(
-                                CampaignLead.lead_id == lead.id,
-                                CampaignLead.campaign_id == orig_message.campaign_id,
-                            )
-                        )).scalar_one_or_none()
-                        if cl_check:
-                            mapped_email = (cl_check.personalization_data or {}).get("test_email_override", "")
-                            if mapped_email.lower() != from_email:
-                                logger.info(
-                                    "check_replies: test reply from %s but lead %s mapped to %s — skipping",
-                                    from_email, lead.id, mapped_email,
-                                )
-                                continue
-                    except Exception:
-                        pass  # if check fails, proceed anyway
-
-                # Check if reply already ingested
-                existing = (await db.execute(
-                    select(Reply).where(
-                        Reply.lead_id == lead.id,
-                        Reply.message_id == orig_message.id,
-                    )
-                )).scalar_one_or_none()
-                if existing:
-                    ingested_nums.append(num)  # already stored — safe to mark SEEN
-                    continue
-
-                body = _body_text(parsed)
-
-                # Run AI analysis to determine intent/sentiment/priority
-                intent = "interested"
-                sentiment = "neutral"
-                priority = "medium"
-                suggested_response = None
-                ai_analysis_data = None
-                try:
-                    from app.agents.reply_analysis_agent import ReplyAnalysisAgent
-                    agent = ReplyAnalysisAgent()
-                    analysis = await agent.run(
-                        reply_text=body,
-                        original_message=orig_message.body_text,
-                    )
-                    if not analysis.get("parse_error"):
-                        intent = analysis.get("intent", "interested")
-                        sentiment = analysis.get("sentiment", "neutral")
-                        priority = analysis.get("priority", "medium")
-                        suggested_response = analysis.get("suggested_response")
-                        ai_analysis_data = {
-                            "key_points": analysis.get("key_points", []),
-                            "suggested_action": analysis.get("suggested_action"),
-                            "objections": analysis.get("objections", []),
-                            "questions": analysis.get("questions", []),
-                            "meeting_requested": analysis.get("meeting_requested", False),
-                            "reply_handler_template": analysis.get("reply_handler_template", "none"),
-                        }
-                except Exception as agent_exc:
-                    logger.warning("check_replies: AI analysis failed: %s", agent_exc)
-
-                reply = Reply(
-                    tenant_id=lead.tenant_id,
-                    message_id=orig_message.id,
-                    lead_id=lead.id,
-                    channel="email",
-                    subject=subject,
-                    body_text=body,
-                    intent=intent,
-                    sentiment=sentiment,
-                    priority=priority,
-                    suggested_response=suggested_response,
-                    ai_analysis=ai_analysis_data,
-                    is_read=False,
-                )
-                db.add(reply)
-
-                if orig_message.campaign_id:
-                    from sqlalchemy import update
-                    await db.execute(
-                        update(Campaign)
-                        .where(Campaign.id == orig_message.campaign_id)
-                        .values(reply_count=Campaign.reply_count + 1)
-                    )
-
-                ingested_nums.append(num)
-                logger.info("check_replies: ingested reply from %s re '%s'", from_email, bare)
+                msg_nums = data[0].split()
             except Exception as exc:
-                logger.warning("check_replies: error processing message %s: %s", num, exc)
+                logger.warning("check_replies: IMAP connect failed for %s: %s", imap_user, exc)
+                continue
 
-        await db.commit()
+            ingested_nums: list = []
+            for num in msg_nums:
+                try:
+                    _, raw = imap.fetch(num, "(BODY.PEEK[])")
+                    raw_bytes = raw[0][1] if raw and raw[0] else None
+                    if not raw_bytes:
+                        continue
+                    parsed = email_lib.message_from_bytes(raw_bytes)
+                    from_raw = parsed.get("From", "")
+                    from_email_match = re.search(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", from_raw, re.I)
+                    if not from_email_match:
+                        continue
+                    from_email = from_email_match.group(0).lower()
 
-        # Mark successfully processed messages as \Seen only after the DB commit.
-        for num in ingested_nums:
+                    is_test_reply = from_email in test_email_set
+                    lead = email_to_lead.get(from_email) if not is_test_reply else None
+                    if not lead and not is_test_reply:
+                        continue
+
+                    subject = _header_str(parsed.get("Subject", ""))
+
+                    # Self-loop guard: skip outbound emails that land in the sender's own inbox
+                    if is_test_reply and from_email == imap_user.lower():
+                        if not re.match(r"^Re:\s*", subject, re.I):
+                            continue
+                    # Also guard for real accounts: skip emails sent FROM this inbox account
+                    if not is_test_reply and from_email == imap_user.lower():
+                        continue
+
+                    bare = re.sub(r"^(Re:\s*)+", "", subject, flags=re.I).strip()
+                    orig_message = subject_to_message.get(bare.lower())
+                    if not orig_message:
+                        orig_message = next(
+                            (v for k, v in subject_to_message.items() if bare.lower().startswith(k[:30])),
+                            None,
+                        )
+                    if not orig_message:
+                        logger.info("check_replies: [%s] no outbound match for subject '%s'", imap_user, bare)
+                        continue
+
+                    if is_test_reply:
+                        lead = lead_by_id.get(orig_message.lead_id)
+                        if not lead:
+                            continue
+                        try:
+                            cl_check = (await db.execute(
+                                select(CampaignLead).where(
+                                    CampaignLead.lead_id == lead.id,
+                                    CampaignLead.campaign_id == orig_message.campaign_id,
+                                )
+                            )).scalar_one_or_none()
+                            if cl_check:
+                                mapped_email = (cl_check.personalization_data or {}).get("test_email_override", "")
+                                if mapped_email.lower() != from_email:
+                                    continue
+                        except Exception:
+                            pass
+
+                    existing = (await db.execute(
+                        select(Reply).where(
+                            Reply.lead_id == lead.id,
+                            Reply.message_id == orig_message.id,
+                        )
+                    )).scalar_one_or_none()
+                    if existing:
+                        ingested_nums.append(num)
+                        continue
+
+                    body = _body_text(parsed)
+
+                    intent = "interested"
+                    sentiment = "neutral"
+                    priority = "medium"
+                    suggested_response = None
+                    ai_analysis_data = None
+                    try:
+                        from app.agents.reply_analysis_agent import ReplyAnalysisAgent
+                        agent = ReplyAnalysisAgent()
+                        analysis = await agent.run(
+                            reply_text=body,
+                            original_message=orig_message.body_text,
+                        )
+                        if not analysis.get("parse_error"):
+                            intent = analysis.get("intent", "interested")
+                            sentiment = analysis.get("sentiment", "neutral")
+                            priority = analysis.get("priority", "medium")
+                            suggested_response = analysis.get("suggested_response")
+                            ai_analysis_data = {
+                                "key_points": analysis.get("key_points", []),
+                                "suggested_action": analysis.get("suggested_action"),
+                                "objections": analysis.get("objections", []),
+                                "questions": analysis.get("questions", []),
+                                "meeting_requested": analysis.get("meeting_requested", False),
+                                "reply_handler_template": analysis.get("reply_handler_template", "none"),
+                            }
+                    except Exception as agent_exc:
+                        logger.warning("check_replies: AI analysis failed (non-fatal): %s", agent_exc)
+
+                    reply = Reply(
+                        tenant_id=lead.tenant_id,
+                        message_id=orig_message.id,
+                        lead_id=lead.id,
+                        channel="email",
+                        subject=subject,
+                        body_text=body,
+                        intent=intent,
+                        sentiment=sentiment,
+                        priority=priority,
+                        suggested_response=suggested_response,
+                        ai_analysis=ai_analysis_data,
+                        is_read=False,
+                    )
+                    db.add(reply)
+
+                    if orig_message.campaign_id:
+                        await db.execute(
+                            update(Campaign)
+                            .where(Campaign.id == orig_message.campaign_id)
+                            .values(reply_count=Campaign.reply_count + 1)
+                        )
+
+                    ingested_nums.append(num)
+                    logger.info("check_replies: [%s] ingested reply from %s re '%s'", imap_user, from_email, bare)
+
+                except Exception as exc:
+                    logger.warning("check_replies: [%s] error processing msg %s: %s", imap_user, num, exc)
+
+            await db.commit()
+
+            for num in ingested_nums:
+                try:
+                    imap.store(num, "+FLAGS", "\\Seen")
+                except Exception:
+                    pass
+
             try:
-                imap.store(num, "+FLAGS", "\\Seen")
+                imap.logout()
             except Exception:
                 pass
-
-    try:
-        imap.logout()
-    except Exception:
-        pass
 
 
 @celery_app.task
