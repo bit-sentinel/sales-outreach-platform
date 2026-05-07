@@ -287,16 +287,7 @@ async def _check_replies_async():
                 subject_to_message[m.subject.lower().strip()] = m
 
         # ── Build list of IMAP accounts to poll ───────────────────────────────
-        # Includes: global env-var account + all SenderAccounts with IMAP creds
-        inbox_list: list[dict] = []
-
-        if settings.gmail_imap_user and settings.gmail_app_password:
-            inbox_list.append({
-                "imap_host": "imap.gmail.com",
-                "imap_user": settings.gmail_imap_user,
-                "imap_password": settings.gmail_app_password,
-            })
-
+        # All active SenderAccounts with IMAP credentials configured in DB
         sa_rows = (await db.execute(
             select(SenderAccount).where(
                 SenderAccount.imap_user.isnot(None),
@@ -305,15 +296,16 @@ async def _check_replies_async():
             )
         )).scalars().all()
 
-        already_queued = {settings.gmail_imap_user.lower()} if settings.gmail_imap_user else set()
+        seen_users: set[str] = set()
+        inbox_list: list[dict] = []
         for sa in sa_rows:
-            if sa.imap_user and sa.imap_user.lower() not in already_queued:
+            if sa.imap_user and sa.imap_user.lower() not in seen_users:
                 inbox_list.append({
                     "imap_host": sa.imap_host or "imap.gmail.com",
                     "imap_user": sa.imap_user,
                     "imap_password": sa.imap_password,
                 })
-                already_queued.add(sa.imap_user.lower())
+                seen_users.add(sa.imap_user.lower())
 
         if not inbox_list:
             logger.debug("check_replies: no IMAP accounts configured, skipping")
