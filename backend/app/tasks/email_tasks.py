@@ -212,6 +212,7 @@ async def _check_replies_async():
     import imaplib
     import email as email_lib
     import re
+    from datetime import date, timedelta
     from email.header import decode_header as _decode_header
     from sqlalchemy import select, update
     from app.models.campaign import Message, Reply, Campaign, CampaignLead, SenderAccount
@@ -327,10 +328,11 @@ async def _check_replies_async():
                 imap = imaplib.IMAP4_SSL(imap_host, 993)
                 imap.login(imap_user, imap_password)
                 imap.select("INBOX")
-                status, data = imap.search(None, "UNSEEN")
+                since_date = (date.today() - timedelta(days=7)).strftime("%d-%b-%Y")
+                status, data = imap.search(None, f'SINCE "{since_date}"')
                 if status != "OK" or not data[0]:
                     imap.logout()
-                    logger.info("check_replies: [%s] no unseen messages", imap_user)
+                    logger.info("check_replies: [%s] no messages in last 7 days", imap_user)
                     continue
                 msg_nums = data[0].split()
             except Exception as exc:
