@@ -94,6 +94,7 @@ class MessageDraftResponse(BaseModel):
     error_message: str | None = None
     ai_generated: bool
     personalization_hooks: list | None = None
+    mapped_test_email: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

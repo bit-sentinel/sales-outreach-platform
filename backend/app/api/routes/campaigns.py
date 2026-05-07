@@ -206,6 +206,19 @@ async def list_campaign_messages(
             co_result = await db.execute(select(Company).where(Company.id.in_(company_ids)))
             companies = {co.id: co for co in co_result.scalars().all()}
 
+        # Fetch per-lead test email overrides from CampaignLead.personalization_data
+        from app.models.campaign import CampaignLead
+        cl_result = await db.execute(
+            select(CampaignLead).where(
+                CampaignLead.campaign_id == campaign_id,
+                CampaignLead.lead_id.in_(lead_ids),
+            )
+        )
+        test_email_map: dict[uuid.UUID, str | None] = {
+            cl.lead_id: (cl.personalization_data or {}).get("test_email_override")
+            for cl in cl_result.scalars().all()
+        }
+
         for lead in leads:
             contact = contacts.get(lead.contact_id) if lead.contact_id else None
             company = companies.get(lead.company_id) if lead.company_id else None
@@ -213,6 +226,7 @@ async def list_campaign_messages(
                 "name": f"{contact.first_name} {contact.last_name}".strip() if contact else None,
                 "email": contact.email if contact else None,
                 "company": company.name if company else None,
+                "mapped_test_email": test_email_map.get(lead.id),
             }
 
     # Resolve sender info (per-message sender account or settings default)
@@ -248,6 +262,7 @@ async def list_campaign_messages(
             error_message=m.error_message,
             ai_generated=m.ai_generated,
             personalization_hooks=m.personalization_hooks,
+            mapped_test_email=info.get("mapped_test_email"),
             created_at=m.created_at,
         ))
 

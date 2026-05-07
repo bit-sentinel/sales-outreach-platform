@@ -34,6 +34,7 @@ interface MessageDraft {
   error_message: string | null;
   ai_generated: boolean;
   personalization_hooks: string[] | null;
+  mapped_test_email: string | null;
   created_at: string;
 }
 
@@ -354,8 +355,8 @@ export function CampaignDraftsPanel({ campaignId, campaignName, testEmails, onCl
                           <span className="w-14 shrink-0 font-semibold text-white/40">To</span>
                           <span className="text-white/70">
                             {msg.lead_email ?? 'unknown'}
-                            {testEmails && testEmails.length > 0 && (
-                              <span className="font-semibold text-[#1c8ed4]"> → {testEmails.join(', ')}</span>
+                            {msg.mapped_test_email && (
+                              <span className="font-semibold text-[#1c8ed4]"> → {msg.mapped_test_email}</span>
                             )}
                           </span>
                         </div>
