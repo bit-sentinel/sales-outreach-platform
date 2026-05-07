@@ -205,6 +205,13 @@ function EmailTab() {
   const [addSaving, setAddSaving] = useState(false);
   const [addError, setAddError] = useState('');
 
+  const [editImapId, setEditImapId] = useState<string | null>(null);
+  const [editImapHost, setEditImapHost] = useState('');
+  const [editImapUser, setEditImapUser] = useState('');
+  const [editImapPassword, setEditImapPassword] = useState('');
+  const [editImapSaving, setEditImapSaving] = useState(false);
+  const [editImapError, setEditImapError] = useState('');
+
   async function load() {
     setLoading(true);
     try {
@@ -243,6 +250,31 @@ function EmailTab() {
   async function handleDelete(id: string) {
     await api({ method: 'DELETE', url: `/admin/sender-accounts/${id}` });
     setAccounts(a => a.filter(x => x.id !== id));
+  }
+
+  function openEditImap(acct: SenderAccount) {
+    setEditImapId(acct.id);
+    setEditImapHost(acct.imap_host || '');
+    setEditImapUser(acct.imap_user || acct.email);
+    setEditImapPassword('');
+    setEditImapError('');
+  }
+
+  async function handleSaveImap(acct: SenderAccount) {
+    setEditImapSaving(true); setEditImapError('');
+    try {
+      const payload: Record<string, string | null> = {
+        imap_host: editImapHost || null,
+        imap_user: editImapUser || null,
+      };
+      if (editImapPassword) payload.imap_password = editImapPassword;
+      await api({ method: 'PATCH', url: `/admin/sender-accounts/${acct.id}`, data: payload });
+      setEditImapId(null);
+      await load();
+    } catch (err: unknown) {
+      const detail = (err as any)?.response?.data?.detail;
+      setEditImapError(typeof detail === 'string' ? detail : 'Failed to save IMAP credentials.');
+    } finally { setEditImapSaving(false); }
   }
 
   const inputCls = 'w-full rounded-xl border border-white/[0.1] bg-white/[0.05] px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition';
@@ -320,39 +352,75 @@ function EmailTab() {
         ) : (
           <div className="space-y-3">
             {accounts.map(acct => (
-              <div key={acct.id} className="flex items-center gap-4 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 hover:bg-white/[0.05] transition-colors">
-                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-                  {acct.provider === 'gmail' ? 'G' : acct.provider === 'sendgrid' ? 'SG' : acct.provider === 'ses' ? 'AWS' : 'SM'}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-sm font-medium text-white">{acct.display_name}</p>
-                    <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-semibold', acct.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/40')}>
-                      {acct.is_active ? 'Active' : 'Paused'}
-                    </span>
+              <div key={acct.id} className="rounded-xl border border-white/[0.08] bg-white/[0.03] overflow-hidden">
+                <div className="flex items-center gap-4 px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                    {acct.provider === 'gmail' ? 'G' : acct.provider === 'sendgrid' ? 'SG' : acct.provider === 'ses' ? 'AWS' : 'SM'}
                   </div>
-                  <p className="text-xs text-white/40">
-                    {acct.email} · {acct.provider} · {acct.sent_today}/{acct.daily_limit} today
-                    {acct.has_imap
-                      ? <span className="ml-2 text-emerald-400">● IMAP connected</span>
-                      : <span className="ml-2 text-amber-400/70">○ No IMAP</span>
-                    }
-                  </p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <div className="flex items-center justify-end gap-1">
-                    <div className="h-1.5 w-16 rounded-full bg-white/[0.08]">
-                      <div className={cn('h-1.5 rounded-full', acct.health_score >= 90 ? 'bg-emerald-500' : acct.health_score >= 70 ? 'bg-amber-500' : 'bg-red-500')} style={{ width: `${acct.health_score}%` }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="text-sm font-medium text-white">{acct.display_name}</p>
+                      <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-semibold', acct.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/10 text-white/40')}>
+                        {acct.is_active ? 'Active' : 'Paused'}
+                      </span>
                     </div>
-                    <span className="text-[10px] text-white/30">{acct.health_score}%</span>
+                    <p className="text-xs text-white/40">
+                      {acct.email} · {acct.provider} · {acct.sent_today}/{acct.daily_limit} today
+                      {acct.has_imap
+                        ? <span className="ml-2 text-emerald-400">● IMAP connected</span>
+                        : <span className="ml-2 text-amber-400/70">○ No IMAP</span>
+                      }
+                    </p>
                   </div>
+                  <div className="text-right flex-shrink-0">
+                    <div className="flex items-center justify-end gap-1">
+                      <div className="h-1.5 w-16 rounded-full bg-white/[0.08]">
+                        <div className={cn('h-1.5 rounded-full', acct.health_score >= 90 ? 'bg-emerald-500' : acct.health_score >= 70 ? 'bg-amber-500' : 'bg-red-500')} style={{ width: `${acct.health_score}%` }} />
+                      </div>
+                      <span className="text-[10px] text-white/30">{acct.health_score}%</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => editImapId === acct.id ? setEditImapId(null) : openEditImap(acct)}
+                    className={cn('rounded-xl border p-1.5 transition-colors ml-1', editImapId === acct.id ? 'border-indigo-500/50 bg-indigo-500/20 text-indigo-400' : 'border-white/[0.1] text-white/30 hover:bg-white/[0.06] hover:text-indigo-400')}
+                    title="Edit IMAP credentials"
+                  >
+                    <Key className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => toggleActive(acct)} className="rounded-xl border border-white/[0.1] p-1.5 text-white/30 hover:bg-white/[0.06] hover:text-white/70 transition-colors" title={acct.is_active ? 'Pause' : 'Resume'}>
+                    {acct.is_active ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                  </button>
+                  <button onClick={() => handleDelete(acct.id)} className="rounded-xl border border-white/[0.1] p-1.5 text-white/30 hover:bg-white/[0.06] hover:text-red-400 transition-colors">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <button onClick={() => toggleActive(acct)} className="rounded-xl border border-white/[0.1] p-1.5 text-white/30 hover:bg-white/[0.06] hover:text-white/70 transition-colors ml-1" title={acct.is_active ? 'Pause' : 'Resume'}>
-                  {acct.is_active ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                </button>
-                <button onClick={() => handleDelete(acct.id)} className="rounded-xl border border-white/[0.1] p-1.5 text-white/30 hover:bg-white/[0.06] hover:text-red-400 transition-colors">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+
+                {editImapId === acct.id && (
+                  <div className="border-t border-white/[0.07] bg-indigo-500/5 px-4 py-3 space-y-3">
+                    <p className="text-xs font-semibold text-white/50">IMAP credentials <span className="font-normal text-white/30">— used for reply polling</span></p>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-white/40 mb-1">IMAP host</label>
+                        <input className={inputCls} placeholder="imap.gmail.com" value={editImapHost} onChange={e => setEditImapHost(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-white/40 mb-1">IMAP username</label>
+                        <input className={inputCls} placeholder="same as email" value={editImapUser} onChange={e => setEditImapUser(e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-white/40 mb-1">App password</label>
+                        <input type="password" className={inputCls} placeholder="leave blank to keep existing" value={editImapPassword} onChange={e => setEditImapPassword(e.target.value)} />
+                      </div>
+                    </div>
+                    {editImapError && <p className="text-xs text-rose-400">{editImapError}</p>}
+                    <div className="flex gap-2">
+                      <button onClick={() => handleSaveImap(acct)} disabled={editImapSaving} className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50 transition">
+                        {editImapSaving && <Loader2 className="h-3 w-3 animate-spin" />} Save
+                      </button>
+                      <button onClick={() => setEditImapId(null)} className="rounded-xl border border-white/[0.1] px-3 py-1.5 text-xs font-medium text-white/50 hover:bg-white/[0.05] transition">Cancel</button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
