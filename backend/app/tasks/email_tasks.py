@@ -212,7 +212,8 @@ async def _check_replies_async():
     import imaplib
     import email as email_lib
     import re
-    from datetime import date, timedelta
+    from datetime import datetime, timedelta, timezone
+    from email.utils import parsedate_to_datetime
     from email.header import decode_header as _decode_header
     from sqlalchemy import select, update
     from app.models.campaign import Message, Reply, Campaign, CampaignLead, SenderAccount
@@ -328,11 +329,12 @@ async def _check_replies_async():
                 imap = imaplib.IMAP4_SSL(imap_host, 993)
                 imap.login(imap_user, imap_password)
                 imap.select("INBOX")
-                since_date = (date.today() - timedelta(days=7)).strftime("%d-%b-%Y")
+                cutoff = datetime.now(timezone.utc) - timedelta(hours=6)
+                since_date = cutoff.strftime("%d-%b-%Y")
                 status, data = imap.search(None, f'SINCE "{since_date}"')
                 if status != "OK" or not data[0]:
                     imap.logout()
-                    logger.info("check_replies: [%s] no messages in last 7 days", imap_user)
+                    logger.info("check_replies: [%s] no messages in last 6 hours", imap_user)
                     continue
                 msg_nums = data[0].split()
             except Exception as exc:
@@ -347,6 +349,14 @@ async def _check_replies_async():
                     if not raw_bytes:
                         continue
                     parsed = email_lib.message_from_bytes(raw_bytes)
+                    try:
+                        msg_dt = parsedate_to_datetime(parsed.get("Date", ""))
+                        if msg_dt.tzinfo is None:
+                            msg_dt = msg_dt.replace(tzinfo=timezone.utc)
+                        if msg_dt < cutoff:
+                            continue
+                    except Exception:
+                        pass
                     from_raw = parsed.get("From", "")
                     from_email_match = re.search(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}", from_raw, re.I)
                     if not from_email_match:
