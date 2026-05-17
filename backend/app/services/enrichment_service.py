@@ -232,11 +232,13 @@ class EnrichmentService:
                     f"Research gap resolved: {finding.get('signal')} ({finding.get('reason', '')})"
                 )
 
+        events_per_year = volume_payload.get("estimated_events_per_year")
+        events_str = f"~{events_per_year}" if events_per_year is not None else "unknown number of"
         company_summary = (
             volume_payload.get("company_summary")
-            or f"Event programme: ~{volume_payload.get('estimated_events_per_year', '?')} events/year"
-            f", complexity: {volume_payload.get('complexity_tier', 'unknown')}"
-            f". Budget band: {budget_payload.get('estimated_budget_band', 'unknown')}."
+            or f"Event programme: {events_str} events/year"
+            f", complexity: {volume_payload.get('complexity_tier') or 'unknown'}"
+            f". Budget band: {budget_payload.get('estimated_budget_band') or 'unknown'}."
         )
 
         source_data = {
