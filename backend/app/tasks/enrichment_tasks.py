@@ -130,30 +130,39 @@ async def _run_pipeline_async(lead_id: str, tenant_id: str, job_ids: dict):
         )
 
         identity_profile: dict = {}
+        identity_provider: str = ""
         if contact and contact.email:
             from app.config import get_settings
-            from app.tools.apollo import enrich_person_by_email
+            from app.tools.apollo import enrich_person_by_email as apollo_enrich
+            from app.tools.pdl import enrich_person_by_email as pdl_enrich
 
             settings = get_settings()
             if settings.apollo_api_key:
-                identity_profile = await enrich_person_by_email(contact.email, settings.apollo_api_key)
+                identity_profile = await apollo_enrich(contact.email, settings.apollo_api_key)
                 if identity_profile:
-                    _apply_identity_profile(company, contact, identity_profile)
-                    db.add(EnrichmentData(
-                        tenant_id=tenant_uuid,
-                        lead_id=lead_uuid,
-                        data_type="identity_profile",
-                        provider="apollo",
-                        data=identity_profile,
-                        confidence=1.0,
-                    ))
-                    await db.commit()
+                    identity_provider = "apollo"
+            if not identity_profile and settings.pdl_api_key:
+                identity_profile = await pdl_enrich(contact.email, settings.pdl_api_key)
+                if identity_profile:
+                    identity_provider = "pdl"
 
-                    if company and company.domain:
-                        company.domain = company.domain.replace("https://", "").replace("http://", "").strip("/")
-                    contact_full_name = (
-                        f"{contact.first_name} {contact.last_name}".strip() if contact else None
-                    )
+            if identity_profile:
+                _apply_identity_profile(company, contact, identity_profile)
+                db.add(EnrichmentData(
+                    tenant_id=tenant_uuid,
+                    lead_id=lead_uuid,
+                    data_type="identity_profile",
+                    provider=identity_provider,
+                    data=identity_profile,
+                    confidence=1.0,
+                ))
+                await db.commit()
+
+                if company and company.domain:
+                    company.domain = company.domain.replace("https://", "").replace("http://", "").strip("/")
+                contact_full_name = (
+                    f"{contact.first_name} {contact.last_name}".strip() if contact else None
+                )
 
         # ── Step 1: Web Research ────────────────────────────────────
         research_output: dict = {}

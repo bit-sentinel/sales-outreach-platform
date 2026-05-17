@@ -61,6 +61,7 @@ class Settings(BaseSettings):
 
     # ── Web Research ─────────────────────────────────────
     apollo_api_key: str = ""
+    pdl_api_key: str = ""
     perplexity_api_key: str = ""
     serpapi_api_key: str = ""
     firecrawl_api_key: str = ""

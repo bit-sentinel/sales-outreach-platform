@@ -124,33 +124,39 @@ async def _run_signal_pipeline_async(lead_id: str, tenant_id: str, job_ids: dict
             f"{contact.first_name} {contact.last_name}".strip() if contact else None
         )
 
-        # ── Apollo identity lookup ──────────────────────────────────────────
+        # ── Contact identity lookup: Apollo → PDL fallback ─────────────────
         identity_profile: dict = {}
-        if contact and contact.email and settings.apollo_api_key:
+        identity_provider: str = ""
+        if contact and contact.email:
+            from app.tools.apollo import enrich_person_by_email as apollo_enrich
+            from app.tools.pdl import enrich_person_by_email as pdl_enrich
             try:
-                from app.tools.apollo import enrich_person_by_email
-                identity_profile = await enrich_person_by_email(
-                    contact.email, settings.apollo_api_key
-                )
+                if settings.apollo_api_key:
+                    identity_profile = await apollo_enrich(contact.email, settings.apollo_api_key)
+                    if identity_profile:
+                        identity_provider = "apollo"
+                if not identity_profile and settings.pdl_api_key:
+                    identity_profile = await pdl_enrich(contact.email, settings.pdl_api_key)
+                    if identity_profile:
+                        identity_provider = "pdl"
                 if identity_profile:
                     _apply_identity_profile(company, contact, identity_profile)
                     db.add(EnrichmentData(
                         tenant_id=tenant_uuid,
                         lead_id=lead_uuid,
                         data_type="identity_profile",
-                        provider="apollo",
+                        provider=identity_provider,
                         data=identity_profile,
                         confidence=1.0,
                     ))
                     await db.commit()
-                    # Refresh domain after Apollo back-fill
                     domain = company.domain if company else None
                     contact_full_name = (
                         f"{contact.first_name} {contact.last_name}".strip() if contact else None
                     )
             except Exception as exc:
                 import logging
-                logging.getLogger(__name__).warning("Apollo lookup failed: %s", exc)
+                logging.getLogger(__name__).warning("Contact identity lookup failed: %s", exc)
 
         # ── Cache service ───────────────────────────────────────────────────
         cache = SignalCacheService(redis_client=redis_client, db=db)
