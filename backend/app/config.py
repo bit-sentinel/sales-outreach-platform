@@ -96,6 +96,11 @@ class Settings(BaseSettings):
     # v1 (run_enrichment_pipeline) remains unchanged and is still used when this flag is False.
     use_signal_pipeline: bool = True
 
+    # ── Pipeline version selector ────────────────────────
+    # "v1" = legacy LLM scorer, "v2" = signal pipeline, "v3" = event intelligence engine.
+    # When "v3", EnrichmentService dispatches orchestrate_event_intelligence.
+    pipeline_version: str = "v2"
+
     # ── Celery ───────────────────────────────────────────
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"

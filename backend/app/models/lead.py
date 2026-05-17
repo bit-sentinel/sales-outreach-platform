@@ -186,9 +186,14 @@ class LeadScore(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
     signal_breakdown: Mapped[dict | None] = mapped_column(JSONB)
     explanation: Mapped[str | None] = mapped_column(Text)
     model_used: Mapped[str | None] = mapped_column(String(50))
-    # "v1" = legacy LLM scorer, "v2" = signal-centric engine
+    # "v1" = legacy LLM scorer, "v2" = signal-centric engine, "v3" = event intelligence
     pipeline_version: Mapped[str] = mapped_column(String(10), server_default="v1")
     scored_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # v3 explainability
+    confidence: Mapped[float | None] = mapped_column(Float)
+    completeness: Mapped[float | None] = mapped_column(Float)
+    disqualified_reason: Mapped[str | None] = mapped_column(String(100))
+    gate_passed: Mapped[str | None] = mapped_column(String(20))
 
     lead: Mapped["Lead"] = relationship(back_populates="scores")
 

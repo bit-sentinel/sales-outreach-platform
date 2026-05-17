@@ -31,6 +31,16 @@ from app.models.campaign import (
     Reply,
     SuppressionList,
 )
+from app.models.event_intelligence import (
+    CompanyEventProfile,
+    OrgGraph,
+    CventEvidence,
+    EventHistory,
+    HiringSignal,
+    BuyingIntentSignal,
+    SignalEvidence,
+    LeadScoreBreakdown,
+)
 
 __all__ = [
     "Tenant",
@@ -58,4 +68,12 @@ __all__ = [
     "FollowUp",
     "Reply",
     "SuppressionList",
+    "CompanyEventProfile",
+    "OrgGraph",
+    "CventEvidence",
+    "EventHistory",
+    "HiringSignal",
+    "BuyingIntentSignal",
+    "SignalEvidence",
+    "LeadScoreBreakdown",
 ]

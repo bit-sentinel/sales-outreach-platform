@@ -21,6 +21,7 @@ class EnrichmentService:
         """Create enrichment jobs and dispatch to Celery pipeline worker."""
         from app.config import get_settings
         settings = get_settings()
+        use_v3 = settings.pipeline_version == "v3"
         use_v2 = settings.use_signal_pipeline
 
         all_job_ids: list[uuid.UUID] = []
@@ -28,7 +29,20 @@ class EnrichmentService:
         for lead_id in lead_ids:
             job_map: dict[str, str] = {}
 
-            if use_v2:
+            if use_v3:
+                job = EnrichmentJob(
+                    tenant_id=self.tenant_id,
+                    lead_id=lead_id,
+                    job_type="event_intelligence",
+                    status="pending",
+                )
+                self.db.add(job)
+                await self.db.flush()
+                all_job_ids.append(job.id)
+                await self.db.commit()
+                from app.tasks.v3.stage_tasks import orchestrate_event_intelligence
+                orchestrate_event_intelligence.delay(str(lead_id))
+            elif use_v2:
                 job = EnrichmentJob(
                     tenant_id=self.tenant_id,
                     lead_id=lead_id,
