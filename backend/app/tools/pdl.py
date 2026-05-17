@@ -33,11 +33,13 @@ def _normalize_pdl_person(data: dict[str, Any], fallback_email: str) -> dict[str
         dept = dept[0] if dept else None
 
     phone = None
-    phones: list = person.get("phone_numbers") or []
-    if phones:
+    phones = person.get("phone_numbers")
+    if isinstance(phones, list) and phones:
         phone = str(phones[0])
-    elif person.get("mobile_phone"):
-        phone = str(person["mobile_phone"])
+    else:
+        mobile = person.get("mobile_phone")
+        if isinstance(mobile, str) and mobile:
+            phone = mobile
 
     linkedin = person.get("linkedin_url") or None
     if linkedin and not linkedin.startswith("http"):
