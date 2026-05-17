@@ -38,9 +38,11 @@ class SignalCacheService:
         self,
         redis_client: "aioredis.Redis | None" = None,
         db: "AsyncSession | None" = None,
+        session_factory=None,
     ) -> None:
         self._redis = redis_client
         self._db = db
+        self._session_factory = session_factory
 
     # ── Public API ──────────────────────────────────────────────────────────
 
@@ -62,13 +64,21 @@ class SignalCacheService:
             except Exception as exc:
                 logger.warning("[signal_cache] Redis GET failed: %s", exc)
 
-        # 2. DB fallback
-        if self._db:
+        # 2. DB fallback — use own session to avoid shared-session concurrency errors
+        db_session = None
+        ctx = None
+        if self._session_factory:
+            ctx = self._session_factory()
+            db_session = await ctx.__aenter__()
+        elif self._db:
+            db_session = self._db
+
+        if db_session:
             try:
-                from sqlalchemy import select, text
+                from sqlalchemy import select
                 from app.models.lead import SignalCache
                 now = datetime.now(timezone.utc)
-                result = await self._db.execute(
+                result = await db_session.execute(
                     select(SignalCache).where(
                         SignalCache.cache_key == key,
                         SignalCache.expires_at > now,
@@ -83,11 +93,13 @@ class SignalCacheService:
                         provider=row.provider or "cache",
                         confidence=row.confidence,
                     )
-                    # Warm Redis so next hit is fast
                     await self._warm_redis(key, sig, row.expires_at)
                     return sig
             except Exception as exc:
                 logger.warning("[signal_cache] DB GET failed: %s", exc)
+            finally:
+                if ctx:
+                    await ctx.__aexit__(None, None, None)
 
         return None
 
@@ -118,13 +130,21 @@ class SignalCacheService:
             except Exception as exc:
                 logger.warning("[signal_cache] Redis SET failed: %s", exc)
 
-        # DB write (upsert)
-        if self._db:
+        # DB write (upsert) — use own session to avoid shared-session concurrency errors
+        db_session = None
+        ctx = None
+        if self._session_factory:
+            ctx = self._session_factory()
+            db_session = await ctx.__aenter__()
+        elif self._db:
+            db_session = self._db
+
+        if db_session:
             try:
                 from sqlalchemy.dialects.postgresql import insert as pg_insert
                 from app.models.lead import SignalCache
-                now = datetime.now(timezone.utc)
                 from datetime import timedelta
+                now = datetime.now(timezone.utc)
                 expires_at = now + timedelta(seconds=ttl_seconds)
 
                 stmt = pg_insert(SignalCache).values(
@@ -146,10 +166,13 @@ class SignalCacheService:
                         "updated_at":  now,
                     },
                 )
-                await self._db.execute(stmt)
-                await self._db.commit()
+                await db_session.execute(stmt)
+                await db_session.commit()
             except Exception as exc:
                 logger.warning("[signal_cache] DB SET failed: %s", exc)
+            finally:
+                if ctx:
+                    await ctx.__aexit__(None, None, None)
 
     # ── Helpers ──────────────────────────────────────────────────────────────
 

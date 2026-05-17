@@ -159,7 +159,9 @@ async def _run_signal_pipeline_async(lead_id: str, tenant_id: str, job_ids: dict
                 logging.getLogger(__name__).warning("Contact identity lookup failed: %s", exc)
 
         # ── Cache service ───────────────────────────────────────────────────
-        cache = SignalCacheService(redis_client=redis_client, db=db)
+        # Pass session_factory (not db) so each concurrent cache get/set
+        # opens its own session — avoids shared AsyncSession concurrency errors.
+        cache = SignalCacheService(redis_client=redis_client, session_factory=async_session_factory)
 
         # ── Check cache for each signal type ────────────────────────────────
         signal_types = [
