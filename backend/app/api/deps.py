@@ -58,8 +58,8 @@ class PaginationDep:
             page = 1
         if page_size < 1:
             page_size = 1
-        if page_size > 100:
-            page_size = 100
+        if page_size > 1000:
+            page_size = 1000
         self.page = page
         self.page_size = page_size
         self.offset = (page - 1) * page_size

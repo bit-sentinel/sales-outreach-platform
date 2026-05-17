@@ -463,6 +463,7 @@ function LeadsPageInner() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [leads, setLeads] = useState<ApiLead[]>([]);
+  const [totalLeads, setTotalLeads] = useState(0);
   const [importResult, setImportResult] = useState<{ success: number; errors: number; fileName: string } | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -479,9 +480,10 @@ function LeadsPageInner() {
       const data = await api<PaginatedData<ApiLead>>({
         url: '/leads',
         method: 'GET',
-        params: { page: 1, page_size: 100, sort_by: 'updated_at', sort_dir: 'desc' },
+        params: { page: 1, page_size: 1000, sort_by: 'updated_at', sort_dir: 'desc' },
       });
       setLeads(data.items);
+      setTotalLeads(data.total);
       setLoadError(null);
     } catch (error: unknown) {
       const message = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
@@ -779,11 +781,11 @@ function LeadsPageInner() {
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-violet-500 transition-all"
-                  style={{ width: leads.length > 0 ? `${Math.round((readyCount / leads.length) * 100)}%` : '0%' }}
+                  style={{ width: totalLeads > 0 ? `${Math.round((readyCount / totalLeads) * 100)}%` : '0%' }}
                 />
               </div>
               <p className="text-[10px] text-white/25 mt-1 text-right">
-                {leads.length > 0 ? Math.round((readyCount / leads.length) * 100) : 0}% campaign-ready
+                {totalLeads > 0 ? Math.round((readyCount / totalLeads) * 100) : 0}% campaign-ready
               </p>
             </div>
           </div>
@@ -815,7 +817,7 @@ function LeadsPageInner() {
                 </div>
                 <p className={cn('mt-3 text-[1.9rem] font-extrabold tracking-[-0.04em]', item.valueCls)}>{item.value.toLocaleString()}</p>
                 <p className={cn('mt-0.5 text-xs font-medium', item.subCls)}>
-                  {leads.length > 0 ? `${Math.round((item.value / leads.length) * 100)}% of pipeline` : '—'}
+                  {totalLeads > 0 ? `${Math.round((item.value / totalLeads) * 100)}% of pipeline` : '—'}
                 </p>
               </button>
             );
@@ -913,11 +915,11 @@ function LeadsPageInner() {
                   ) : null}
                   <button
                     onClick={handleEnrichAll}
-                    disabled={enriching || leads.length === 0}
+                    disabled={enriching || totalLeads === 0}
                     className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-sm font-semibold text-amber-300 transition-colors hover:bg-amber-500/20 disabled:opacity-50"
                   >
                     {enriching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
-                    {enriching ? 'Triggering…' : `Enrich all (${leads.length})`}
+                    {enriching ? 'Triggering…' : `Enrich all (${totalLeads.toLocaleString()})`}
                   </button>
                 </div>
               </div>
