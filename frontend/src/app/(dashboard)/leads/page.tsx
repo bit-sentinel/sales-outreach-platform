@@ -243,6 +243,12 @@ interface LeadRow {
   activeCampaignName: string | null;
 }
 
+// Pipeline progression order for status column sorting (lower = earlier in funnel)
+const STATUS_ORDER: Record<string, number> = {
+  new: 0, enriching: 1, enriched: 2, scored: 3,
+  campaign_active: 4, replied: 5, converted: 6,
+};
+
 const tierConfig: Record<string, { label: string; className: string }> = {
   hot:  { label: 'Hot',  className: 'bg-rose-500/20 text-rose-300' },
   warm: { label: 'Warm', className: 'bg-amber-500/20 text-amber-300' },
@@ -411,7 +417,13 @@ function makeColumns(onEnrich: (id: string) => void): ColumnDef<LeadRow>[] {
   },
   {
     accessorKey: 'status',
-    header: () => <span className="text-xs font-semibold text-white/40">Status</span>,
+    sortingFn: (a, b) =>
+      (STATUS_ORDER[a.original.status] ?? 99) - (STATUS_ORDER[b.original.status] ?? 99),
+    header: ({ column }) => (
+      <button className="flex items-center gap-1 text-xs font-semibold text-white/40" onClick={() => column.toggleSorting()}>
+        Status <ArrowUpDown className="h-3 w-3" />
+      </button>
+    ),
     cell: ({ row }) => {
       const config = statusConfig[row.original.status] ?? statusConfig.new;
       return <span className={cn('inline-flex rounded-full px-2.5 py-1 text-xs font-semibold', config.className)}>{config.label}</span>;
