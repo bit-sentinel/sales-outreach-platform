@@ -100,7 +100,9 @@ class OrgGraphAgent(PortedV2Agent):
     stage = PipelineStage.IDENTITY.value
     cache_scope = CacheScope.COMPANY
     cache_ttl_hours = 720
-    depends_on = (SignalType.IDENTITY,)
+    # No depends_on: runs concurrently with IdentityAgent in Stage 1. It
+    # augments from the identity profile when present and degrades to
+    # company.industry / company.employee_count when it is not.
 
     @staticmethod
     def v2_factory():

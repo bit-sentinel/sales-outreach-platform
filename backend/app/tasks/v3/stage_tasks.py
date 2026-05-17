@@ -232,17 +232,44 @@ async def _run_score_stage(run_id: UUID, lead_id: UUID) -> bool:
 
         lead.status = "scored"
         lead.enrichment_status = "enriched"
-        await upsert_company_profile(session, tenant_id, lead.company_id, {
-            "overall_fit_score": score.overall_score,
-            "outsourcing_tier": (results.get(SignalType.OUTSOURCING).payload.get("outsourcing_tier")
-                                 if results.get(SignalType.OUTSOURCING) else "unknown"),
-            "data_completeness": score.completeness,
-            "summary": ls.explanation,
-        })
+        await upsert_company_profile(session, tenant_id, lead.company_id,
+                                     _build_profile_rollup(results, score, ls.explanation))
         await session.commit()
 
     logger.info("[v3] scored lead %s -> %.1f (%s)", lead_id, score.overall_score, score.tier)
     return gate2_score(score)
+
+
+def _build_profile_rollup(results, score, explanation: str) -> dict:
+    """Compose the CompanyEventProfile rollup from scored signal payloads."""
+    cvent = results.get(SignalType.CVENT)
+    volume = results.get(SignalType.EVENT_VOLUME)
+    budget = results.get(SignalType.BUDGET)
+    outsourcing = results.get(SignalType.OUTSOURCING)
+
+    cvent_v = cvent.value if cvent and cvent.is_usable() else 0.0
+    cvent_status = ("confirmed" if cvent_v >= 0.5
+                    else "likely" if cvent_v > 0.0 else "none")
+    vol_payload = volume.payload if volume and volume.is_usable() else {}
+    events = vol_payload.get("estimated_events_per_year")
+    volume_tier = ("high" if (events or 0) >= 12
+                   else "medium" if (events or 0) >= 4
+                   else "low" if events else "unknown")
+    return {
+        "cvent_status": cvent_status,
+        "cvent_confidence": cvent.confidence if cvent else None,
+        "event_volume_tier": volume_tier,
+        "estimated_events_per_year": events,
+        "estimated_budget_band": (budget.payload.get("estimated_budget_band")
+                                  if budget and budget.is_usable() else None),
+        "budget_confidence": budget.confidence if budget else None,
+        "outsourcing_propensity": outsourcing.value if outsourcing else None,
+        "outsourcing_tier": (outsourcing.payload.get("outsourcing_tier")
+                             if outsourcing and outsourcing.is_usable() else "unknown"),
+        "overall_fit_score": score.overall_score,
+        "data_completeness": score.completeness,
+        "summary": explanation,
+    }
 
 
 async def _finalize_disqualified(run_id: UUID, lead_id: UUID, reason: str) -> None:
