@@ -412,3 +412,106 @@ def orchestrate_event_intelligence(lead_id: str, run_id: str | None = None,
         _save_job_id(UUID(rid), job_id)
     stage1_identity.delay(rid, lead_id)
     return rid
+
+
+# ── Re-score task (scoring only, no enrichment agents) ────────────────────
+
+async def _rescore_async(lead_id: UUID) -> dict:
+    """Load cached AgentResults from signal_cache and re-run scoring only."""
+    from sqlalchemy import select
+    from app.models.lead import Lead, Company, Contact, LeadScore
+    from app.agents.v3.cache import AgentResultCache
+    from app.agents.v3.contracts import CacheScope
+
+    session_factory = _session_factory()
+
+    async with session_factory() as session:
+        lead = (await session.execute(
+            select(Lead).where(Lead.id == lead_id)
+        )).scalar_one_or_none()
+        if not lead:
+            logger.warning("[v3rescore] lead %s not found", lead_id)
+            return {"status": "error", "reason": "lead_not_found"}
+
+        company = (await session.execute(
+            select(Company).where(Company.id == lead.company_id)
+        )).scalar_one_or_none()
+        contact = (await session.execute(
+            select(Contact).where(Contact.id == lead.contact_id)
+        )).scalar_one_or_none()
+
+    if not company:
+        return {"status": "error", "reason": "company_not_found"}
+
+    company_id = company.domain or company.name
+    contact_id = (contact.email if contact else "") or ""
+
+    # Load from Postgres signal_cache only (Redis L1 may have expired)
+    cache = AgentResultCache(redis_client=None, session_factory=session_factory)
+
+    # All scoring signals + auxiliary signals used in caps/gates/persona
+    signal_map = [
+        (SignalType.CVENT,       CacheScope.COMPANY,  company_id),
+        (SignalType.OUTSOURCING, CacheScope.COMPANY,  company_id),
+        (SignalType.ORG_GRAPH,   CacheScope.COMPANY,  company_id),
+        (SignalType.BUDGET,      CacheScope.COMPANY,  company_id),
+        (SignalType.HIRING,      CacheScope.COMPANY,  company_id),
+        (SignalType.EVENT_VOLUME,CacheScope.COMPANY,  company_id),
+        (SignalType.EVENT_TEAM,  CacheScope.CONTACT,  contact_id),
+        (SignalType.IDENTITY,    CacheScope.CONTACT,  contact_id),
+    ]
+
+    results: dict[SignalType, AgentResult] = {}
+    for signal, scope, identifier in signal_map:
+        if not identifier:
+            continue
+        r = await cache.get(signal, scope, identifier)
+        if r:
+            results[signal] = r
+
+    if not any(s in results for s in (
+        SignalType.CVENT, SignalType.OUTSOURCING, SignalType.ORG_GRAPH
+    )):
+        logger.warning("[v3rescore] no usable scoring signals in cache for lead %s", lead_id)
+        return {"status": "skipped", "reason": "no_cached_signals"}
+
+    agg = EvidenceAggregator().aggregate(results)
+    score = ScoringEngine().score(results, agg["completeness"])
+
+    async with session_factory() as session:
+        lead = (await session.execute(
+            select(Lead).where(Lead.id == lead_id)
+        )).scalar_one()
+
+        session.add(LeadScore(
+            tenant_id=lead.tenant_id, lead_id=lead_id,
+            overall_score=score.overall_score, tier=score.tier,
+            signal_scores=score.signal_scores,
+            signal_breakdown={b.signal_type.value: {
+                "value": b.raw_value, "weight": b.weight,
+                "contribution": b.contribution, "confidence": b.confidence,
+            } for b in score.breakdown},
+            explanation="; ".join(b.rationale for b in score.breakdown[:3]),
+            model_used="v3_scoring_engine_v2", pipeline_version="v3",
+            scored_at=datetime.now(timezone.utc),
+            confidence=score.confidence, completeness=score.completeness,
+            gate_passed=score.gate_passed,
+        ))
+
+        lead.status = "scored"
+        lead.enrichment_status = "enriched"
+        await session.commit()
+
+    logger.info("[v3rescore] lead %s -> %.1f (%s)", lead_id, score.overall_score, score.tier)
+    return {"status": "ok", "score": score.overall_score, "tier": score.tier}
+
+
+@celery_app.task(name="app.tasks.v3.rescore_lead", queue="enrichment",
+                 bind=True, max_retries=2, default_retry_delay=30)
+def rescore_lead_v3(self, lead_id_str: str) -> dict:
+    """Re-score an already-enriched lead using cached signals. No agent calls."""
+    try:
+        return asyncio.run(_rescore_async(UUID(lead_id_str)))
+    except Exception as exc:
+        logger.error("[v3rescore] lead %s error: %s", lead_id_str, exc)
+        raise self.retry(exc=exc)

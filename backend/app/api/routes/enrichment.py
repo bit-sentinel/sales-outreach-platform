@@ -114,6 +114,34 @@ async def trigger_enrich_all(
     return APIResponse(data={"jobs_created": len(job_ids), "lead_count": len(lead_ids), "job_ids": job_ids})
 
 
+@router.post("/rescore-all", status_code=202)
+async def trigger_rescore_all(
+    current_user=Depends(get_current_user),
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Re-score all enriched leads using cached signals (no enrichment agents run)."""
+    from app.models.lead import Lead
+    from app.tasks.v3.stage_tasks import rescore_lead_v3
+
+    lead_ids = (await db.execute(
+        select(Lead.id)
+        .where(Lead.tenant_id == tenant_id, Lead.enrichment_status == "enriched")
+    )).scalars().all()
+
+    if not lead_ids:
+        return APIResponse(data={"queued": 0, "lead_ids": []})
+
+    for lid in lead_ids:
+        rescore_lead_v3.delay(str(lid))
+
+    await log_action(db, tenant_id=tenant_id, user_id=current_user.id,
+                     action="leads.rescore_all", resource_type="lead",
+                     details={"lead_count": len(lead_ids)})
+
+    return APIResponse(data={"queued": len(lead_ids), "lead_ids": [str(i) for i in lead_ids]})
+
+
 @router.get("/jobs/{job_id}", response_model=APIResponse[EnrichmentJobResponse])
 async def get_enrichment_job(
     job_id: uuid.UUID,
