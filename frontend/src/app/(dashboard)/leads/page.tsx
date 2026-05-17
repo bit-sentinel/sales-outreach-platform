@@ -824,7 +824,7 @@ function LeadsPageInner() {
 
         <p className="mt-4 text-[11px] text-white/25 leading-relaxed">
           <FileSpreadsheet className="inline h-3 w-3 mr-1 -mt-px" />
-          CSV / XLSX accepted — minimum columns: <span className="text-white/40">Name · Customer Name · Customer Email</span>. Optional: Named Acct · Success Experience · Country Region. Enrichment agents fill the rest automatically.
+          CSV / XLSX accepted — minimum columns: <span className="text-white/40">Name · Customer Name · Customer Email</span>. Optional: Named Acct · Success Experience · Country Region. Select contacts and click <span className="text-white/40">Enrich selected</span> to start the pipeline.
         </p>
       </section>
 
@@ -901,7 +901,7 @@ function LeadsPageInner() {
                         className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-60"
                       >
                         {enriching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-                        {enriching ? 'Triggering…' : 'Re-enrich selected'}
+                        {enriching ? 'Triggering…' : 'Enrich selected'}
                       </button>
                       <button
                         onClick={() => setRowSelection({})}

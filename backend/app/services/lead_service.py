@@ -404,45 +404,6 @@ class LeadService:
         batch.error_rows = errors
         await self.db.flush()
 
-        # Auto-trigger enrichment for all newly imported leads
-        if new_lead_ids:
-            from app.config import get_settings
-            _settings = get_settings()
-            if _settings.use_signal_pipeline:
-                from app.tasks.signal_tasks import run_signal_pipeline
-                from app.models.lead import EnrichmentJob
-                for lead_id in new_lead_ids:
-                    job_map: dict[str, str] = {}
-                    for etype in ["signal_pipeline"]:
-                        job = EnrichmentJob(
-                            tenant_id=self.tenant_id,
-                            lead_id=lead_id,
-                            job_type=etype,
-                            status="pending",
-                        )
-                        self.db.add(job)
-                        await self.db.flush()
-                        job_map[etype] = str(job.id)
-                    await self.db.commit()
-                    run_signal_pipeline.delay(str(lead_id), str(self.tenant_id), job_map)
-            else:
-                from app.tasks.enrichment_tasks import run_enrichment_pipeline
-                from app.models.lead import EnrichmentJob
-                for lead_id in new_lead_ids:
-                    job_map: dict[str, str] = {}
-                    for etype in ["web_research", "company", "scoring"]:
-                        job = EnrichmentJob(
-                            tenant_id=self.tenant_id,
-                            lead_id=lead_id,
-                            job_type=etype,
-                            status="pending",
-                        )
-                        self.db.add(job)
-                        await self.db.flush()
-                        job_map[etype] = str(job.id)
-                    await self.db.commit()
-                    run_enrichment_pipeline.delay(str(lead_id), str(self.tenant_id), job_map)
-
         return batch
 
     async def bulk_add_tags(self, lead_ids: list[uuid.UUID], tags: list[str]) -> int:
