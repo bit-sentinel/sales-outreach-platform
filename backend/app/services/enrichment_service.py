@@ -19,33 +19,44 @@ class EnrichmentService:
         self, lead_ids: list[uuid.UUID], enrichment_types: list[str]
     ) -> list[uuid.UUID]:
         """Create enrichment jobs and dispatch to Celery pipeline worker."""
+        from app.config import get_settings
+        settings = get_settings()
+        use_v2 = settings.use_signal_pipeline
+
         all_job_ids: list[uuid.UUID] = []
 
         for lead_id in lead_ids:
-            # Create one job per enrichment type for this lead
-            job_map: dict[str, str] = {}  # job_type -> str(job.id)
-            for etype in enrichment_types:
+            job_map: dict[str, str] = {}
+
+            if use_v2:
                 job = EnrichmentJob(
                     tenant_id=self.tenant_id,
                     lead_id=lead_id,
-                    job_type=etype,
+                    job_type="signal_pipeline",
                     status="pending",
                 )
                 self.db.add(job)
                 await self.db.flush()
-                job_map[etype] = str(job.id)
+                job_map["signal_pipeline"] = str(job.id)
                 all_job_ids.append(job.id)
-
-            # Commit so Celery workers can read the job rows immediately
-            await self.db.commit()
-
-            # Dispatch the pipeline task (runs research → enrich → score in sequence)
-            from app.tasks.enrichment_tasks import run_enrichment_pipeline
-            run_enrichment_pipeline.delay(
-                str(lead_id),
-                str(self.tenant_id),
-                job_map,
-            )
+                await self.db.commit()
+                from app.tasks.signal_tasks import run_signal_pipeline
+                run_signal_pipeline.delay(str(lead_id), str(self.tenant_id), job_map)
+            else:
+                for etype in enrichment_types:
+                    job = EnrichmentJob(
+                        tenant_id=self.tenant_id,
+                        lead_id=lead_id,
+                        job_type=etype,
+                        status="pending",
+                    )
+                    self.db.add(job)
+                    await self.db.flush()
+                    job_map[etype] = str(job.id)
+                    all_job_ids.append(job.id)
+                await self.db.commit()
+                from app.tasks.enrichment_tasks import run_enrichment_pipeline
+                run_enrichment_pipeline.delay(str(lead_id), str(self.tenant_id), job_map)
 
         return all_job_ids
 

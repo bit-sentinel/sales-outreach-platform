@@ -74,14 +74,10 @@ def run_enrichment_pipeline(self, lead_id: str, tenant_id: str, job_ids: list):
     job_ids is a dict mapping job_type -> job_id (as strings).
     """
     import asyncio
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
     try:
-        loop.run_until_complete(_run_pipeline_async(lead_id, tenant_id, job_ids))
+        asyncio.run(_run_pipeline_async(lead_id, tenant_id, job_ids))
     except Exception as exc:
         raise self.retry(exc=exc)
-    finally:
-        loop.close()
 
 
 async def _run_pipeline_async(lead_id: str, tenant_id: str, job_ids: dict):
