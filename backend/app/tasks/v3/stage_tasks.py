@@ -85,8 +85,9 @@ def _save_upstream(run_id: UUID, results: dict[SignalType, AgentResult]) -> None
 
 # ── context ────────────────────────────────────────────────────────────────
 async def _build_context(session, run_id: UUID, lead_id: UUID) -> AgentContext:
-    from sqlalchemy import select
-    from app.models.lead import Lead, Company, Contact
+    from sqlalchemy import desc, select
+    from app.models.lead import Lead, Company, Contact, LeadScore
+    from app.models.event_intelligence import CompanyEventProfile
 
     lead = (await session.execute(select(Lead).where(Lead.id == lead_id))).scalar_one()
     company = (await session.execute(
@@ -96,7 +97,35 @@ async def _build_context(session, run_id: UUID, lead_id: UUID) -> AgentContext:
     if company is None:
         raise RuntimeError(f"lead {lead_id} has no company")
 
+    # Stage-6 inputs — present once Stage 5 has run; harmless (None) earlier.
+    extra: dict = {}
+    score = (await session.execute(
+        select(LeadScore).where(LeadScore.lead_id == lead_id)
+        .order_by(desc(LeadScore.created_at)).limit(1))).scalar_one_or_none()
+    if score is not None:
+        extra["lead_score"] = {
+            "overall_score": score.overall_score, "tier": score.tier,
+            "confidence": score.confidence, "completeness": score.completeness,
+            "signal_scores": score.signal_scores or {},
+            "signal_breakdown": score.signal_breakdown or {},
+            "explanation": score.explanation,
+        }
+    profile = (await session.execute(
+        select(CompanyEventProfile)
+        .where(CompanyEventProfile.company_id == company.id))).scalar_one_or_none()
+    if profile is not None:
+        extra["company_profile"] = {
+            "cvent_status": profile.cvent_status,
+            "event_volume_tier": profile.event_volume_tier,
+            "estimated_events_per_year": profile.estimated_events_per_year,
+            "estimated_budget_band": profile.estimated_budget_band,
+            "outsourcing_tier": profile.outsourcing_tier,
+            "overall_fit_score": profile.overall_fit_score,
+            "summary": profile.summary,
+        }
+
     return AgentContext(
+        extra=extra,
         run_id=run_id, lead_id=lead_id,
         company=CompanyContext(
             company_id=company.id, tenant_id=lead.tenant_id, name=company.name,

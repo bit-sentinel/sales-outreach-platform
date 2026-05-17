@@ -152,6 +152,8 @@ class AgentContext(BaseModel):
     company: CompanyContext
     contact: ContactContext | None = None
     upstream: dict[SignalType, AgentResult] = Field(default_factory=dict)
+    # Stage-specific extras (e.g. lead_score, company_profile loaded at Stage 6).
+    extra: dict[str, Any] = Field(default_factory=dict)
     force_refresh: bool = False
 
     def upstream_payload(self, signal: SignalType) -> dict[str, Any]:
