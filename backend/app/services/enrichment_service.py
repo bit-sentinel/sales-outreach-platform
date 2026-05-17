@@ -131,7 +131,7 @@ class EnrichmentService:
         }
 
     async def _load_v3_signals(self, lead_id: uuid.UUID) -> dict[str, dict]:
-        """Load all v3 signal cache results for a lead. Returns {signal_type: payload}."""
+        """Load all v3 signal cache results for a lead. Returns {signal_type: result_dict}."""
         ids = await self._get_lead_identifiers(lead_id)
         if not ids:
             return {}
@@ -139,11 +139,12 @@ class EnrichmentService:
         company_id = ids["domain"]
         email = ids["email"]
 
+        # Scope per agent class (mirrors each agent's cache_scope declaration)
         company_signals = [
-            "identity", "org_graph", "cvent", "event_volume",
-            "event_team", "hiring", "budget", "outsourcing", "targeted_research",
+            "org_graph", "cvent", "event_volume", "hiring",
+            "budget", "outsourcing", "targeted_research",
         ]
-        contact_signals = ["outreach"]
+        contact_signals = ["identity", "event_team", "outreach"]
 
         results: dict[str, dict] = {}
         for sig in company_signals:
