@@ -15,13 +15,11 @@ from app.schemas.common import APIResponse
 
 router = APIRouter()
 
-# Queue → human label mapping (mirrors docker-compose queues)
+# Queue → human label mapping (mirrors the -Q flag on the celery-worker container)
 _QUEUE_LABELS: dict[str, str] = {
-    "default":     "Import worker",
-    "enrichment":  "Enrichment worker",
-    "ai":          "AI worker",
-    "email":       "Email worker",
-    "campaign":    "Campaign worker",
+    "default":    "General worker",
+    "enrichment": "Enrichment worker",
+    "ai":         "AI worker",
 }
 
 # Cache celery inspect result — it's slow (2 s timeout) and called frequently
