@@ -27,6 +27,9 @@ import {
   CalendarCheck,
   CalendarClock,
   XCircle,
+  Megaphone,
+  Lightbulb,
+  Star,
 } from 'lucide-react';
 import { api } from '@/lib/api-client';
 import { cn } from '@/lib/utils';
@@ -163,6 +166,39 @@ interface EventItem {
   confirmed?: boolean;
   url?: string | null;
   description?: string;
+}
+
+interface OutreachAngle {
+  angle: string;
+  why: string;
+  backed_by_signal: string;
+}
+
+interface OutreachEventRef {
+  event_name: string;
+  detail: string;
+  why_relevant: string;
+  source_url?: string | null;
+}
+
+interface OutreachServiceRec {
+  service: string;
+  rationale: string;
+  matched_signal: string;
+}
+
+interface OutreachIntelligence {
+  recommended_contact_role: string;
+  subject_line: string;
+  email_body: string;
+  angles: OutreachAngle[];
+  event_references: OutreachEventRef[];
+  timing_recommendation: string;
+  timing_rationale: string;
+  service_recommendations: OutreachServiceRec[];
+  generation_basis: Record<string, unknown>;
+  confidence: number;
+  generated_at?: string | null;
 }
 
 // ──────────────────────────────── Helpers ─────────────────────────────────────
@@ -762,10 +798,28 @@ function EnrichmentTab({ insights, enrichmentData }: { insights: AIInsight[]; en
     };
   } | null ?? null;
 
-  const tableData = enrichmentData.find((d) => d.data_type === 'company_contact');
+  const tableData = enrichmentData.find((d) => d.data_type === 'company_contact' || d.data_type === 'company_event_profile');
   const raw = rawInsightData ?? (tableData?.data as unknown as typeof rawInsightData) ?? null;
 
-  if (!raw) {
+  // v3 event profile data (different shape from v2 company_contact)
+  const v3Profile = tableData?.data_type === 'company_event_profile'
+    ? tableData.data as {
+        company?: {
+          cvent_status?: string; cvent_confidence?: number; event_volume_tier?: string;
+          estimated_events_per_year?: number; complexity_tier?: string;
+          estimated_budget_band?: string; budget_confidence?: number;
+          outsourcing_tier?: string; outsourcing_propensity?: number;
+          event_team_size?: number; event_team_under_resourced?: boolean;
+          registration_urls?: string[]; pipeline_version?: string;
+        };
+        contact?: {
+          title_inferred?: string; seniority_estimate?: string;
+          department_estimate?: string; decision_maker_status?: string;
+        };
+      }
+    : null;
+
+  if (!rawInsightData && !v3Profile && !enrichmentData.find(d => d.data_type === 'company_contact')) {
     return (
       <div className="glass-card rounded-[28px] p-10 text-center">
         <Sparkles className="mx-auto h-8 w-8 text-slate-600 mb-3" />
@@ -774,8 +828,58 @@ function EnrichmentTab({ insights, enrichmentData }: { insights: AIInsight[]; en
     );
   }
 
-  const company = raw.company;
-  const contact = raw.contact;
+  // Render v3 event profile if that's what we have
+  if (v3Profile) {
+    const cp = v3Profile.company;
+    const ct = v3Profile.contact;
+    const cventColor = cp?.cvent_status === 'confirmed' ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/20'
+      : cp?.cvent_status === 'likely' ? 'bg-amber-500/15 text-amber-300 border-amber-500/20'
+      : 'bg-white/10 text-slate-400 border-white/10';
+    return (
+      <div className="space-y-5">
+        <div className="glass-card rounded-[28px] p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Zap className="h-4 w-4 text-indigo-400" />
+            <h3 className="text-sm font-semibold text-white">Event Operations Profile</h3>
+            <span className="ml-auto text-xs text-slate-500">v3 pipeline</span>
+          </div>
+          <div className="grid grid-cols-1 gap-x-10 lg:grid-cols-2">
+            <div>
+              <InfoRow label="Cvent Status" value={cp?.cvent_status ? (
+                <span className={cn('text-xs rounded-full px-2.5 py-0.5 border font-semibold', cventColor)}>{cp.cvent_status}</span>
+              ) : undefined} />
+              <InfoRow label="Event Volume" value={cp?.event_volume_tier ? `${cp.event_volume_tier} (${cp.estimated_events_per_year ?? '?'} events/yr)` : undefined} />
+              <InfoRow label="Complexity" value={cp?.complexity_tier} />
+              <InfoRow label="Budget Band" value={cp?.estimated_budget_band} />
+            </div>
+            <div>
+              <InfoRow label="Outsourcing" value={cp?.outsourcing_tier ? `${cp.outsourcing_tier}${cp.outsourcing_propensity != null ? ` (${Math.round((cp.outsourcing_propensity || 0) * 100)}%)` : ''}` : undefined} />
+              <InfoRow label="Event Team" value={cp?.event_team_size ? `~${cp.event_team_size} people${cp.event_team_under_resourced ? ' · under-resourced' : ''}` : undefined} />
+              {ct?.title_inferred && <InfoRow label="Contact Title" value={ct.title_inferred} />}
+              {ct?.seniority_estimate && <InfoRow label="Seniority" value={ct.seniority_estimate} />}
+              {ct?.decision_maker_status && <InfoRow label="Decision Maker" value={ct.decision_maker_status} />}
+            </div>
+          </div>
+          {cp?.registration_urls && cp.registration_urls.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">Cvent Registration URLs</p>
+              <div className="space-y-1">
+                {cp.registration_urls.slice(0, 4).map((url, i) => (
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 hover:underline truncate">
+                    <ExternalLink className="h-3 w-3 shrink-0" />{url}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const company = rawInsightData?.company ?? (tableData?.data as typeof rawInsightData)?.company;
+  const contact = rawInsightData?.contact ?? (tableData?.data as typeof rawInsightData)?.contact;
 
   return (
     <div className="space-y-5">
@@ -865,6 +969,198 @@ function EnrichmentTab({ insights, enrichmentData }: { insights: AIInsight[]; en
   );
 }
 
+// ──────────────────────────────── Shared signal labels ───────────────────────
+
+const SIGNAL_LABELS: Record<string, string> = {
+  // v3 signal names
+  identity:          'Identity & Fit',
+  cvent:             'Cvent Detection',
+  event_volume:      'Event Volume',
+  event_team:        'Event Team',
+  hiring:            'Hiring Activity',
+  budget:            'Budget Signal',
+  outsourcing:       'Outsourcing Propensity',
+  org_graph:         'Org Graph',
+  targeted_research: 'Targeted Research',
+  outreach:          'Outreach Intelligence',
+  // v1/v2 signal names (legacy)
+  cvent_events:      'Cvent Events',
+  hiring_signal:     'Hiring Activity',
+  org_fit:           'Org Fit',
+  news_signal:       'News Signal',
+  industry_fit:      'Industry Fit',
+};
+
+// ──────────────────────────────── Outreach Tab ───────────────────────────────
+
+function OutreachTab({ outreach }: { outreach: OutreachIntelligence | null }) {
+  const [copied, setCopied] = useState(false);
+
+  if (!outreach) {
+    return (
+      <div className="glass-card rounded-[28px] p-10 text-center">
+        <Megaphone className="mx-auto h-8 w-8 text-slate-600 mb-3" />
+        <p className="font-semibold text-slate-400">No outreach intelligence yet</p>
+        <p className="mt-1 text-sm text-slate-500">Run enrichment to generate a personalized outreach package.</p>
+      </div>
+    );
+  }
+
+  function copyEmail() {
+    navigator.clipboard.writeText(outreach!.email_body);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Email Package */}
+      <div className="glass-card-strong rounded-[28px] p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <Mail className="h-4 w-4 text-indigo-400" />
+          <h3 className="text-sm font-semibold text-white">Outreach Package</h3>
+          {outreach.recommended_contact_role && (
+            <span className="ml-2 text-xs rounded-full bg-indigo-500/15 border border-indigo-500/20 text-indigo-300 px-2.5 py-0.5">
+              Target: {outreach.recommended_contact_role}
+            </span>
+          )}
+          <button
+            onClick={copyEmail}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/[0.1] bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-white/[0.08]"
+          >
+            {copied ? <CheckCircle2 className="h-3 w-3 text-emerald-400" /> : <Send className="h-3 w-3" />}
+            {copied ? 'Copied!' : 'Copy email'}
+          </button>
+        </div>
+
+        {outreach.subject_line && (
+          <div className="mb-4 rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Subject Line</p>
+            <p className="text-sm font-medium text-white">{outreach.subject_line}</p>
+          </div>
+        )}
+
+        {outreach.email_body && (
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Email Body</p>
+            <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">{outreach.email_body}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Angles + Timing */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        {outreach.angles.length > 0 && (
+          <div className="glass-card rounded-[28px] p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Lightbulb className="h-4 w-4 text-amber-400" />
+              <h3 className="text-sm font-semibold text-white">Outreach Angles</h3>
+            </div>
+            <div className="space-y-3">
+              {outreach.angles.map((angle, i) => (
+                <div key={i} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
+                  <p className="text-sm font-medium text-slate-200">{angle.angle}</p>
+                  <p className="text-xs text-slate-500 mt-1">{angle.why}</p>
+                  {angle.backed_by_signal && angle.backed_by_signal !== 'unknown' && (
+                    <span className="mt-1.5 inline-flex text-[10px] font-semibold rounded-full bg-indigo-500/15 border border-indigo-500/20 text-indigo-300 px-2 py-0.5">
+                      {SIGNAL_LABELS[angle.backed_by_signal] ?? angle.backed_by_signal}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {(outreach.timing_recommendation || outreach.timing_rationale) && (
+            <div className="glass-card rounded-[28px] p-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Clock className="h-4 w-4 text-indigo-400" />
+                <h3 className="text-sm font-semibold text-white">Timing</h3>
+              </div>
+              {outreach.timing_recommendation && (
+                <p className="text-sm font-medium text-slate-200">{outreach.timing_recommendation}</p>
+              )}
+              {outreach.timing_rationale && (
+                <p className="text-xs text-slate-500 mt-1">{outreach.timing_rationale}</p>
+              )}
+            </div>
+          )}
+
+          {outreach.service_recommendations.length > 0 && (
+            <div className="glass-card rounded-[28px] p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Star className="h-4 w-4 text-amber-400" />
+                <h3 className="text-sm font-semibold text-white">Service Recommendations</h3>
+              </div>
+              <div className="space-y-3">
+                {outreach.service_recommendations.map((rec, i) => (
+                  <div key={i} className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-3">
+                    <p className="text-sm font-medium text-slate-200">{rec.service}</p>
+                    <p className="text-xs text-slate-500 mt-1">{rec.rationale}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Event References */}
+      {outreach.event_references.length > 0 && (
+        <div className="glass-card rounded-[28px] p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <CalendarDays className="h-4 w-4 text-indigo-400" />
+            <h3 className="text-sm font-semibold text-white">Event References</h3>
+            <span className="ml-auto text-xs text-slate-500">{outreach.event_references.length} event(s) cited</span>
+          </div>
+          <div className="space-y-3">
+            {outreach.event_references.map((ref, i) => (
+              <div key={i} className="flex items-start gap-3 rounded-xl border border-indigo-500/20 bg-indigo-500/10 p-4">
+                <Zap className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-400" />
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <p className="text-sm font-semibold text-slate-200">{ref.event_name}</p>
+                    {ref.source_url && (
+                      <a href={ref.source_url} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300">
+                        <ExternalLink className="h-3 w-3" />
+                        Source
+                      </a>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400">{ref.detail}</p>
+                  <p className="text-xs text-slate-500 mt-1 italic">{ref.why_relevant}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Generation basis */}
+      {outreach.generation_basis && Object.keys(outreach.generation_basis).length > 0 && (
+        <div className="rounded-[28px] border border-white/[0.06] bg-white/[0.02] p-5">
+          <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-3">Generated from</p>
+          <div className="flex flex-wrap gap-2">
+            {(outreach.generation_basis.signals_used as string[] | undefined)?.map((s) => (
+              <span key={s} className="rounded-full bg-white/[0.06] border border-white/[0.08] px-2.5 py-0.5 text-xs text-slate-400">
+                {SIGNAL_LABELS[s] ?? s}
+              </span>
+            ))}
+            {outreach.generation_basis.evidence_count != null && (
+              <span className="rounded-full bg-white/[0.06] border border-white/[0.08] px-2.5 py-0.5 text-xs text-slate-400">
+                {String(outreach.generation_basis.evidence_count)} evidence items
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ──────────────────────────────── Scoring Tab ─────────────────────────────────
 
 function SignalRow({ signal }: { signal: SignalDetail }) {
@@ -896,28 +1192,61 @@ function SignalRow({ signal }: { signal: SignalDetail }) {
   );
 }
 
-const SIGNAL_LABELS: Record<string, string> = {
-  cvent_events:   'Cvent Events',
-  event_volume:   'Event Volume',
-  hiring_signal:  'Hiring Activity',
-  org_fit:        'Org Fit',
-  news_signal:    'News Signal',
-  industry_fit:   'Industry Fit',
-};
-
 function reasoningFromEvidence(signalType: string, evidence: Record<string, unknown>): string {
   switch (signalType) {
+    // ── v3 signal types ──
+    case 'cvent': {
+      const detected = evidence.detected as boolean | undefined;
+      const count = evidence.upcoming_count as number | undefined;
+      const days = evidence.soonest_days as number | undefined;
+      if (detected) {
+        const base = 'Cvent usage confirmed';
+        if (days != null && days >= 0) return `${base} · ${count ?? '?'} upcoming event(s), soonest in ${days}d`;
+        return base;
+      }
+      return 'Cvent usage not confirmed';
+    }
+    case 'event_volume': {
+      const epy = evidence.estimated_events_per_year as number | null | undefined;
+      const cmx = evidence.complexity_tier as string | undefined;
+      return `~${epy ?? '?'} events/year · complexity: ${cmx ?? 'unknown'}`;
+    }
+    case 'event_team': {
+      const size = evidence.event_team_size as number | undefined;
+      const under = evidence.under_resourced as boolean | undefined;
+      return size ? `Team size ~${size}${under ? ' (under-resourced)' : ''}` : 'Event team data unavailable';
+    }
+    case 'hiring': {
+      const roles = evidence.roles as Array<{title?: string}> | undefined;
+      if (roles?.length) return `${roles.length} event role(s) open: ${roles.slice(0, 2).map(r => r.title).join(', ')}`;
+      return 'No open event roles found';
+    }
+    case 'budget': {
+      const band = evidence.estimated_budget_band as string | undefined;
+      const annual = evidence.estimated_annual_usd as number | undefined;
+      return band ? `Est. budget ${band}${annual ? ` (~$${(annual/1000).toFixed(0)}k/yr)` : ''}` : 'Budget estimate unavailable';
+    }
+    case 'outsourcing': {
+      const tier = evidence.outsourcing_tier as string | undefined;
+      return tier ? `Outsourcing propensity: ${tier}` : 'Outsourcing signal unavailable';
+    }
+    case 'identity':
+      return (evidence.reason as string | undefined) ?? 'Identity & fit assessed';
+    case 'org_graph': {
+      const hc = evidence.headcount_total as number | undefined;
+      return hc ? `Org size ~${hc.toLocaleString()} headcount` : 'Org data assessed';
+    }
+    case 'targeted_research': {
+      const gaps = evidence.gaps as number | undefined;
+      return gaps ? `Targeted ${gaps} data gap(s)` : 'All signals above confidence threshold';
+    }
+    // ── v1/v2 legacy signal types ──
     case 'cvent_events': {
       const days = evidence.soonest_days as number | undefined;
       const count = evidence.upcoming_count as number | undefined;
       if (days != null && days >= 0) return `${count ?? '?'} upcoming event(s) — soonest in ${days}d`;
       const pages = evidence.total_pages_found as number | undefined;
       return pages ? `${pages} Cvent page(s) found, no upcoming dates confirmed` : 'No Cvent pages found';
-    }
-    case 'event_volume': {
-      const epy = evidence.events_per_year as number | null | undefined;
-      const cmx = evidence.complexity as string | undefined;
-      return `~${epy ?? '?'} events/year · complexity: ${cmx ?? 'unknown'}`;
     }
     case 'hiring_signal': {
       const kw = evidence.matched_keywords as string[] | undefined;
@@ -1219,7 +1548,7 @@ function ActivityTab({ leadId }: { leadId: string }) {
 
 // ──────────────────────────────── Main Page ───────────────────────────────────
 
-const TABS = ['Overview', 'Research', 'Enrichment', 'Scoring', 'Activity'] as const;
+const TABS = ['Overview', 'Research', 'Enrichment', 'Outreach', 'Scoring', 'Activity'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function LeadDetailPage({ params }: { params: { id: string } }) {
@@ -1230,18 +1559,20 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
   const [insights, setInsights] = useState<AIInsight[]>([]);
   const [research, setResearch] = useState<ResearchItem[]>([]);
   const [enrichmentData, setEnrichmentData] = useState<EnrichmentDataItem[]>([]);
+  const [outreach, setOutreach] = useState<OutreachIntelligence | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const [leadResult, scoreResult, insightsResult, researchResult, enrichResult] = await Promise.allSettled([
+        const [leadResult, scoreResult, insightsResult, researchResult, enrichResult, outreachResult] = await Promise.allSettled([
           api<LeadDetail>({ method: 'GET', url: `/leads/${id}` }),
           api<ScoreData>({ method: 'GET', url: `/enrichment/lead/${id}/score` }),
           api<AIInsight[]>({ method: 'GET', url: `/enrichment/lead/${id}/insights` }),
           api<ResearchItem[]>({ method: 'GET', url: `/enrichment/lead/${id}/research` }),
           api<EnrichmentDataItem[]>({ method: 'GET', url: `/enrichment/lead/${id}/data` }),
+          api<OutreachIntelligence>({ method: 'GET', url: `/enrichment/lead/${id}/outreach` }),
         ]);
         if (leadResult.status === 'fulfilled') setLead(leadResult.value);
         else setError('Lead not found');
@@ -1249,6 +1580,7 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
         if (insightsResult.status === 'fulfilled') setInsights(insightsResult.value);
         if (researchResult.status === 'fulfilled') setResearch(researchResult.value);
         if (enrichResult.status === 'fulfilled') setEnrichmentData(enrichResult.value);
+        if (outreachResult.status === 'fulfilled') setOutreach(outreachResult.value);
       } finally {
         setLoading(false);
       }
@@ -1352,6 +1684,11 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
                   {Math.round(score.overall_score)}
                 </span>
               )}
+              {tab === 'Outreach' && outreach && (
+                <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-bold">
+                  ✓
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -1361,6 +1698,7 @@ export default function LeadDetailPage({ params }: { params: { id: string } }) {
       {activeTab === 'Overview' && <OverviewTab lead={lead} score={score} events={overviewEvents} />}
       {activeTab === 'Research' && <ResearchTab insights={insights} research={research} />}
       {activeTab === 'Enrichment' && <EnrichmentTab insights={insights} enrichmentData={enrichmentData} />}
+      {activeTab === 'Outreach' && <OutreachTab outreach={outreach} />}
       {activeTab === 'Scoring' && <ScoringTab score={score} insights={insights} />}
       {activeTab === 'Activity' && <ActivityTab leadId={id} />}
     </div>

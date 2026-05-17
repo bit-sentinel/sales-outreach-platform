@@ -175,3 +175,17 @@ async def get_lead_enrichment_data(
     svc = EnrichmentService(db, tenant_id)
     data = await svc.get_enrichment_data(lead_id)
     return APIResponse(data=data)
+
+
+@router.get("/lead/{lead_id}/outreach")
+async def get_lead_outreach(
+    lead_id: uuid.UUID,
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get v3 outreach intelligence package for a lead."""
+    svc = EnrichmentService(db, tenant_id)
+    outreach = await svc.get_lead_outreach(lead_id)
+    if not outreach:
+        raise HTTPException(status_code=404, detail="No outreach intelligence found for this lead")
+    return APIResponse(data=outreach)
