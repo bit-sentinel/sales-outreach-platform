@@ -25,14 +25,14 @@ async def _search_tavily(query: str, api_key: str, max_results: int = 5) -> list
     """Search using Tavily AI search API."""
     try:
         from tavily import AsyncTavilyClient
-        client = AsyncTavilyClient(api_key=api_key)
-        response = await client.search(
-            query=query,
-            search_depth="basic",
-            max_results=max_results,
-            include_answer=False,
-            include_raw_content=False,
-        )
+        async with AsyncTavilyClient(api_key=api_key) as client:
+            response = await client.search(
+                query=query,
+                search_depth="basic",
+                max_results=max_results,
+                include_answer=False,
+                include_raw_content=False,
+            )
         results = []
         for r in response.get("results", []):
             results.append(SearchResult(
