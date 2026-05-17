@@ -533,16 +533,19 @@ function LeadsPageInner() {
     }
   }
 
-  const STATUS_PRIORITY: Record<string, number> = {
-    scored: 0,
-    enriched: 1,
-    campaign_active: 2,
-    replied: 3,
-    converted: 4,
-    enriching: 5,
-    new: 6,
-    disqualified: 7,
-  };
+  const TIER_PRIORITY: Record<string, number> = { hot: 0, warm: 1, cold: 2 };
+
+  function sortKey(row: LeadRow): [number, number, number, string] {
+    // Group 0 = scored, 1 = enriched-not-scored, 2 = new/everything else
+    const isScored = row.status === 'scored';
+    const isEnriched = !isScored && row.enrichmentStatus === 'enriched';
+    const group = isScored ? 0 : isEnriched ? 1 : 2;
+    // Within scored: tier order hot→warm→cold
+    const tier = isScored ? (TIER_PRIORITY[row.scoreTier ?? ''] ?? 3) : 0;
+    // Within same tier: higher score first (negate so higher sorts earlier)
+    const score = -(row.scoreValue ?? -1);
+    return [group, tier, score, row.name];
+  }
 
   const rows = useMemo<LeadRow[]>(() => {
     return leads
@@ -567,12 +570,12 @@ function LeadsPageInner() {
         };
       })
       .sort((a, b) => {
-        const pa = STATUS_PRIORITY[a.status] ?? 99;
-        const pb = STATUS_PRIORITY[b.status] ?? 99;
-        if (pa !== pb) return pa - pb;
-        // within same status: higher score first, then alpha by name
-        if ((b.scoreValue ?? -1) !== (a.scoreValue ?? -1)) return (b.scoreValue ?? -1) - (a.scoreValue ?? -1);
-        return a.name.localeCompare(b.name);
+        const [ag, at, as_, an] = sortKey(a);
+        const [bg, bt, bs, bn] = sortKey(b);
+        if (ag !== bg) return ag - bg;
+        if (at !== bt) return at - bt;
+        if (as_ !== bs) return as_ - bs;
+        return an.localeCompare(bn);
       });
   }, [leads]);
 
