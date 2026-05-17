@@ -533,27 +533,47 @@ function LeadsPageInner() {
     }
   }
 
-  const rows = useMemo<LeadRow[]>(() => {
-    return leads.map((lead) => {
-      const firstName = lead.contact?.first_name?.trim() ?? '';
-      const lastName = lead.contact?.last_name?.trim() ?? '';
-      const fullName = `${firstName} ${lastName}`.trim() || 'Unknown contact';
+  const STATUS_PRIORITY: Record<string, number> = {
+    scored: 0,
+    enriched: 1,
+    campaign_active: 2,
+    replied: 3,
+    converted: 4,
+    enriching: 5,
+    new: 6,
+    disqualified: 7,
+  };
 
-      return {
-        id: lead.id,
-        name: fullName,
-        email: lead.contact?.email ?? 'No email',
-        company: lead.company?.name ?? 'Unknown company',
-        title: lead.contact?.title || lead.contact?.department || 'Role pending enrichment',
-        status: lead.status,
-        enrichmentStatus: lead.enrichment_status,
-        source: (lead.source || 'manual').replaceAll('_', ' '),
-        updatedAt: formatRelativeTime(lead.updated_at),
-        scoreTier: lead.score_tier ?? null,
-        scoreValue: lead.score_value ?? null,
-        activeCampaignName: lead.active_campaign_name ?? null,
-      };
-    });
+  const rows = useMemo<LeadRow[]>(() => {
+    return leads
+      .map((lead) => {
+        const firstName = lead.contact?.first_name?.trim() ?? '';
+        const lastName = lead.contact?.last_name?.trim() ?? '';
+        const fullName = `${firstName} ${lastName}`.trim() || 'Unknown contact';
+
+        return {
+          id: lead.id,
+          name: fullName,
+          email: lead.contact?.email ?? 'No email',
+          company: lead.company?.name ?? 'Unknown company',
+          title: lead.contact?.title || lead.contact?.department || 'Role pending enrichment',
+          status: lead.status,
+          enrichmentStatus: lead.enrichment_status,
+          source: (lead.source || 'manual').replaceAll('_', ' '),
+          updatedAt: formatRelativeTime(lead.updated_at),
+          scoreTier: lead.score_tier ?? null,
+          scoreValue: lead.score_value ?? null,
+          activeCampaignName: lead.active_campaign_name ?? null,
+        };
+      })
+      .sort((a, b) => {
+        const pa = STATUS_PRIORITY[a.status] ?? 99;
+        const pb = STATUS_PRIORITY[b.status] ?? 99;
+        if (pa !== pb) return pa - pb;
+        // within same status: higher score first, then alpha by name
+        if ((b.scoreValue ?? -1) !== (a.scoreValue ?? -1)) return (b.scoreValue ?? -1) - (a.scoreValue ?? -1);
+        return a.name.localeCompare(b.name);
+      });
   }, [leads]);
 
   const filteredRows = useMemo(() => {
