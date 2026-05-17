@@ -41,7 +41,7 @@ class EnrichmentService:
                 all_job_ids.append(job.id)
                 await self.db.commit()
                 from app.tasks.v3.stage_tasks import orchestrate_event_intelligence
-                orchestrate_event_intelligence.delay(str(lead_id))
+                orchestrate_event_intelligence.delay(str(lead_id), job_id=str(job.id))
             elif use_v2:
                 job = EnrichmentJob(
                     tenant_id=self.tenant_id,

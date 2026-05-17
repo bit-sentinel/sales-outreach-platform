@@ -83,6 +83,53 @@ def _save_upstream(run_id: UUID, results: dict[SignalType, AgentResult]) -> None
         logger.warning("[v3] could not save run state: %s", exc)
 
 
+def _save_job_id(run_id: UUID, job_id: str) -> None:
+    try:
+        client = _sync_redis()
+        client.setex(f"v3run:{run_id}:job_id", 7200, job_id)
+        client.close()
+    except Exception:
+        pass
+
+
+def _mark_job_done(run_id: UUID, status: str, error: str | None = None) -> None:
+    """Update the EnrichmentJob row that tracks this v3 run."""
+    try:
+        import asyncio
+        from datetime import datetime, timezone
+        from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+        from sqlalchemy import select
+        from app.models.lead import EnrichmentJob
+
+        client = _sync_redis()
+        job_id_str = client.get(f"v3run:{run_id}:job_id")
+        client.close()
+        if not job_id_str:
+            return
+
+        job_uuid = UUID(job_id_str)
+        s = get_settings()
+        engine = create_async_engine(str(s.database_url))
+        factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+        async def _update():
+            async with factory() as session:
+                job = (await session.execute(
+                    select(EnrichmentJob).where(EnrichmentJob.id == job_uuid)
+                )).scalar_one_or_none()
+                if job:
+                    job.status = status
+                    job.completed_at = datetime.now(timezone.utc)
+                    if error:
+                        job.error = error[:500]
+                    await session.commit()
+            await engine.dispose()
+
+        asyncio.run(_update())
+    except Exception as exc:
+        logger.warning("[v3] could not mark job done: %s", exc)
+
+
 # ── context ────────────────────────────────────────────────────────────────
 async def _build_context(session, run_id: UUID, lead_id: UUID) -> AgentContext:
     from sqlalchemy import desc, select
@@ -290,6 +337,7 @@ async def _finalize_disqualified(run_id: UUID, lead_id: UUID, reason: str) -> No
         lead.enrichment_status = "enriched"
         await session.commit()
     logger.info("[v3] lead %s disqualified at Gate 1: %s", lead_id, reason)
+    _mark_job_done(run_id, "completed")
 
 
 # ── dispatch ───────────────────────────────────────────────────────────────
@@ -313,6 +361,7 @@ def _make_stage_task(stage: PipelineStage):
                     _dispatch_next(stage, run_id, lead_id)
                 else:
                     logger.info("[v3] Gate 2 not passed — stopping before Stage 6")
+                    _mark_job_done(rid, "completed")
                 return
 
             asyncio.run(_run_collection_stage(stage, rid, lid))
@@ -323,9 +372,15 @@ def _make_stage_task(stage: PipelineStage):
                     asyncio.run(_finalize_disqualified(rid, lid, reason or "gate1"))
                     return
 
+            if stage is PipelineStage.INTELLIGENCE:
+                _mark_job_done(rid, "completed")
+                return
+
             _dispatch_next(stage, run_id, lead_id)
         except Exception as exc:
             logger.error("[v3] stage %s infra error: %s", stage.value, exc)
+            if self.request.retries >= self.max_retries:
+                _mark_job_done(rid, "failed", error=str(exc))
             raise self.retry(exc=exc)
 
     return _task
@@ -349,8 +404,11 @@ _STAGE_TASKS = {
 
 
 @celery_app.task(name="app.tasks.v3.orchestrate", queue="enrichment")
-def orchestrate_event_intelligence(lead_id: str, run_id: str | None = None) -> str:
-    """Entry point — creates a run and kicks off Stage 1."""
+def orchestrate_event_intelligence(lead_id: str, run_id: str | None = None,
+                                   job_id: str | None = None) -> str:
+    """Entry point — creates a run, stores the job_id, kicks off Stage 1."""
     rid = run_id or str(uuid4())
+    if job_id:
+        _save_job_id(UUID(rid), job_id)
     stage1_identity.delay(rid, lead_id)
     return rid
