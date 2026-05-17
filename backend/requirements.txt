@@ -26,6 +26,7 @@ docker>=7.0.0,<8.0
 langchain>=0.2.0,<0.3
 langchain-openai>=0.1.7,<0.2
 langchain-anthropic>=0.1.13,<0.2
+json-repair>=0.30.0
 langgraph>=0.0.55,<0.1
 openai>=1.25.0,<1.26
 tiktoken>=0.7.0,<0.8

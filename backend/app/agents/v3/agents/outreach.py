@@ -24,6 +24,7 @@ from app.agents.v3.contracts import (
     AgentContext, AgentResult, AgentStatus, CacheScope, EvidenceItem,
     PipelineStage, SignalType, SourceType,
 )
+from app.agents.v3.errors import RetryableError
 from app.agents.v3.registry import register_agent
 
 logger = logging.getLogger(__name__)
@@ -134,6 +135,36 @@ def build_user_prompt(ctx: AgentContext, facts: list[str],
     )
 
 
+# ── JSON parsing ──────────────────────────────────────────────────────────
+def _parse_llm_json(raw: str) -> dict:
+    """
+    Tolerant JSON extraction from LLM output.
+    1. Strip markdown code fences.
+    2. Extract first {...} block.
+    3. Try strict json.loads.
+    4. Fall back to json_repair if available.
+    5. Raise RetryableError so the agent retries on complete failure.
+    """
+    # Strip ```json ... ``` or ``` ... ``` fences
+    text = re.sub(r"```(?:json)?\s*", "", raw).strip()
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if not match:
+        raise RetryableError("no JSON object in LLM response")
+    candidate = match.group(0)
+    try:
+        return json.loads(candidate)
+    except json.JSONDecodeError:
+        pass
+    # Try json_repair (pip install json-repair) for tolerant parsing
+    try:
+        from json_repair import repair_json
+        repaired = repair_json(candidate)
+        return json.loads(repaired)
+    except Exception:
+        pass
+    raise RetryableError(f"unparseable JSON from LLM (len={len(candidate)})")
+
+
 # ── Agent ──────────────────────────────────────────────────────────────────
 @register_agent
 class OutreachIntelligenceAgent(BaseIntelligenceAgent):
@@ -190,8 +221,7 @@ class OutreachIntelligenceAgent(BaseIntelligenceAgent):
         resp = await llm.ainvoke([system, user])
 
         raw = resp.content if isinstance(resp.content, str) else str(resp.content)
-        match = re.search(r"\{.*\}", raw, re.DOTALL)
-        parsed = json.loads(match.group(0)) if match else {}
+        parsed = _parse_llm_json(raw)
         intel = OutreachIntelligence.model_validate(parsed)
 
         # explainability — record exactly what fed the generation
