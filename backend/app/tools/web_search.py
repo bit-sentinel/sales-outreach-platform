@@ -12,11 +12,89 @@ continues with partial results.
 `scrape_url(url)` extracts full-page markdown for a single URL via Firecrawl.
 """
 
+import asyncio
 import logging
+import time
+from contextlib import asynccontextmanager
 
 from app.tools.search_types import SearchResult
 
 logger = logging.getLogger(__name__)
+
+# Firecrawl free-plan limits
+_FC_RATE_LIMITS = {"scrape": 10, "search": 5}  # requests per minute
+_FC_MAX_CONCURRENT = 2                           # concurrent browser sessions
+
+
+@asynccontextmanager
+async def _fc_throttle(endpoint: str):
+    """Acquire a Firecrawl rate-limit slot before making an API call.
+
+    Enforces two constraints via Redis so limits are shared across all Celery
+    workers (not just within a single process):
+      - Per-minute request cap (10 for /scrape, 5 for /search)
+      - Max 2 concurrent browser sessions for /scrape
+    Blocks until both constraints are satisfied, then yields.
+    """
+    try:
+        import redis.asyncio as aioredis
+        from app.config import get_settings
+        r = aioredis.from_url(str(get_settings().redis_url), decode_responses=True)
+    except Exception as exc:
+        logger.warning("Firecrawl throttle: cannot connect to Redis (%s) — proceeding unthrottled", exc)
+        yield
+        return
+
+    rate_limit = _FC_RATE_LIMITS.get(endpoint, 10)
+    concur_acquired = False
+
+    # Lua: atomically increment only when under the per-minute cap.
+    # Returns new count on success, 0 when already at limit.
+    _RATE_LUA = (
+        "local c=redis.call('INCR',KEYS[1]) "
+        "if c==1 then redis.call('EXPIRE',KEYS[1],70) end "
+        "if c<=tonumber(ARGV[1]) then return c "
+        "else redis.call('DECR',KEYS[1]) return 0 end"
+    )
+    # Lua: atomically increment concurrency counter only when under the cap.
+    _CONCUR_LUA = (
+        "local c=tonumber(redis.call('GET',KEYS[1]) or '0') "
+        "if c<tonumber(ARGV[1]) then "
+        "redis.call('INCR',KEYS[1]) redis.call('EXPIRE',KEYS[1],300) return 1 "
+        "end return 0"
+    )
+
+    try:
+        # ── 1. Per-minute rate limit ───────────────────────────────────────────
+        while True:
+            window = int(time.time()) // 60
+            rate_key = f"fc:rate:{endpoint}:{window}"
+            count = await r.eval(_RATE_LUA, 1, rate_key, rate_limit)
+            if count:
+                break
+            wait = 60 - (int(time.time()) % 60) + 1
+            logger.warning(
+                "Firecrawl /%s at rate limit (%d req/min), waiting %ds for next window",
+                endpoint, rate_limit, wait,
+            )
+            await asyncio.sleep(wait)
+
+        # ── 2. Concurrency cap (scrape only, browsers are the bottleneck) ─────
+        if endpoint == "scrape":
+            while True:
+                acquired = await r.eval(_CONCUR_LUA, 1, "fc:concurrent", _FC_MAX_CONCURRENT)
+                if acquired:
+                    concur_acquired = True
+                    break
+                logger.debug("Firecrawl: %d concurrent browser slots full, waiting 2s", _FC_MAX_CONCURRENT)
+                await asyncio.sleep(2)
+
+        yield
+
+    finally:
+        if concur_acquired:
+            await r.decr("fc:concurrent")
+        await r.aclose()
 
 
 # ── Tavily ────────────────────────────────────────────────────────────────────
@@ -54,15 +132,14 @@ async def _search_tavily(query: str, api_key: str, max_results: int = 5) -> list
 async def _search_firecrawl(query: str, api_key: str, max_results: int = 5) -> list[SearchResult]:
     """Search using Firecrawl's search endpoint."""
     try:
-        import asyncio
         from firecrawl import FirecrawlApp
         app = FirecrawlApp(api_key=api_key)
-        # firecrawl-py is sync; run in thread pool to stay async-friendly
         loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None,
-            lambda: app.search(query, params={"limit": max_results}),
-        )
+        async with _fc_throttle("search"):
+            response = await loop.run_in_executor(
+                None,
+                lambda: app.search(query, params={"limit": max_results}),
+            )
         # firecrawl-py returns a list directly or {"data": [...]} depending on version
         items = response if isinstance(response, list) else (response.get("data") or [])
         results = []
@@ -83,14 +160,14 @@ async def _search_firecrawl(query: str, api_key: str, max_results: int = 5) -> l
 async def scrape_url(url: str, api_key: str) -> str:
     """Scrape a single URL to markdown via Firecrawl.  Returns empty string on failure."""
     try:
-        import asyncio
         from firecrawl import FirecrawlApp
         app = FirecrawlApp(api_key=api_key)
         loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None,
-            lambda: app.scrape_url(url, params={"formats": ["markdown"]}),
-        )
+        async with _fc_throttle("scrape"):
+            response = await loop.run_in_executor(
+                None,
+                lambda: app.scrape_url(url, params={"formats": ["markdown"]}),
+            )
         return response.get("markdown", "")
     except Exception as e:
         logger.warning("Firecrawl scrape failed for %s: %s", url, e)
