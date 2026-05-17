@@ -87,12 +87,23 @@ interface LeadDetail {
   scores: ScoreItem[];
 }
 
+interface SignalBreakdownEntry {
+  value: number;
+  weight: number;
+  contribution: number;
+  provider: string;
+  confidence: number;
+  evidence: Record<string, unknown>;
+}
+
 interface ScoreItem {
   id: string;
   overall_score: number;
   tier: string;
   signal_scores: Record<string, number>;
+  signal_breakdown?: Record<string, SignalBreakdownEntry>;
   explanation: string | null;
+  pipeline_version?: string;
   created_at: string;
 }
 
@@ -100,8 +111,10 @@ interface ScoreData {
   overall_score: number;
   tier: string;
   signal_scores: Record<string, number>;
+  signal_breakdown?: Record<string, SignalBreakdownEntry>;
   explanation: string | null;
   model: string | null;
+  pipeline_version?: string;
   created_at: string;
 }
 
@@ -883,6 +896,48 @@ function SignalRow({ signal }: { signal: SignalDetail }) {
   );
 }
 
+const SIGNAL_LABELS: Record<string, string> = {
+  cvent_events:   'Cvent Events',
+  event_volume:   'Event Volume',
+  hiring_signal:  'Hiring Activity',
+  org_fit:        'Org Fit',
+  news_signal:    'News Signal',
+  industry_fit:   'Industry Fit',
+};
+
+function reasoningFromEvidence(signalType: string, evidence: Record<string, unknown>): string {
+  switch (signalType) {
+    case 'cvent_events': {
+      const days = evidence.soonest_days as number | undefined;
+      const count = evidence.upcoming_count as number | undefined;
+      if (days != null && days >= 0) return `${count ?? '?'} upcoming event(s) — soonest in ${days}d`;
+      const pages = evidence.total_pages_found as number | undefined;
+      return pages ? `${pages} Cvent page(s) found, no upcoming dates confirmed` : 'No Cvent pages found';
+    }
+    case 'event_volume': {
+      const epy = evidence.events_per_year as number | null | undefined;
+      const cmx = evidence.complexity as string | undefined;
+      return `~${epy ?? '?'} events/year · complexity: ${cmx ?? 'unknown'}`;
+    }
+    case 'hiring_signal': {
+      const kw = evidence.matched_keywords as string[] | undefined;
+      return kw?.length ? `${kw.length} role keyword(s) matched: ${kw.slice(0, 3).join(', ')}` : 'No event job postings found';
+    }
+    case 'org_fit': {
+      const sen = evidence.seniority_label as string | undefined;
+      const dept = evidence.department_label as string | undefined;
+      const size = evidence.company_size as number | string | undefined;
+      return `Seniority: ${sen ?? '?'} · Dept: ${dept ?? '?'} · Size: ${size ?? '?'}`;
+    }
+    case 'news_signal':
+      return (evidence.reason as string | undefined) ?? 'No relevant news';
+    case 'industry_fit':
+      return `Industry: ${evidence.industry_raw as string | undefined ?? '?'} → ${evidence.matched_label as string | undefined ?? '?'}`;
+    default:
+      return 'No evidence available';
+  }
+}
+
 function ScoringTab({ score, insights }: { score: ScoreData | null; insights: AIInsight[] }) {
   const scoreInsight = insights.find((i) => i.type === 'lead_score');
   const rawSignals = (scoreInsight?.source_data as { signals?: SignalDetail[] } | null)?.signals ?? [];
@@ -890,9 +945,16 @@ function ScoringTab({ score, insights }: { score: ScoreData | null; insights: AI
   const signals: SignalDetail[] =
     rawSignals.length > 0
       ? rawSignals
+      : score?.signal_breakdown
+      ? Object.entries(score.signal_breakdown).map(([stype, detail]) => ({
+          signal_name: SIGNAL_LABELS[stype] ?? stype,
+          score: detail.value,
+          weight: detail.weight,
+          reasoning: reasoningFromEvidence(stype, detail.evidence ?? {}),
+        }))
       : score
       ? Object.entries(score.signal_scores).map(([name, val]) => ({
-          signal_name: name,
+          signal_name: SIGNAL_LABELS[name] ?? name,
           score: val,
           weight: 0.1,
           reasoning: 'Detailed reasoning not available.',

@@ -182,7 +182,46 @@ class LeadScore(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
     overall_score: Mapped[float] = mapped_column(Float, nullable=False)
     tier: Mapped[str] = mapped_column(String(20), nullable=False)  # hot, warm, cold
     signal_scores: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    # New: per-signal breakdown (value, weight, evidence) from signal pipeline
+    signal_breakdown: Mapped[dict | None] = mapped_column(JSONB)
     explanation: Mapped[str | None] = mapped_column(Text)
     model_used: Mapped[str | None] = mapped_column(String(50))
+    # "v1" = legacy LLM scorer, "v2" = signal-centric engine
+    pipeline_version: Mapped[str] = mapped_column(String(10), server_default="v1")
+    scored_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     lead: Mapped["Lead"] = relationship(back_populates="scores")
+
+
+class LeadSignal(Base, UUIDPrimaryKeyMixin, TenantMixin, TimestampMixin):
+    """One row per signal type per lead. Written by signal agents, read by scoring engine."""
+    __tablename__ = "lead_signals"
+
+    lead_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("leads.id"), nullable=False, index=True
+    )
+    signal_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    value: Mapped[float] = mapped_column(Float, nullable=False)     # 0.0 – 1.0 normalized strength
+    weight: Mapped[float] = mapped_column(Float, nullable=False)    # scoring weight for this signal type
+    evidence: Mapped[dict] = mapped_column(JSONB, nullable=False)   # structured evidence for explainability
+    provider: Mapped[str | None] = mapped_column(String(100))       # which tool(s) sourced this signal
+    confidence: Mapped[float | None] = mapped_column(Float)
+    # When this signal expires and should be re-collected (NULL = never re-collect)
+    cached_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class SignalCache(Base, UUIDPrimaryKeyMixin, TimestampMixin):
+    """
+    Company-level signal cache keyed by (signal_type, domain_hash).
+    Allows multiple contacts from the same company to share signal data.
+    No tenant_id: signals are company facts, not tenant-specific.
+    """
+    __tablename__ = "signal_cache"
+
+    cache_key: Mapped[str] = mapped_column(String(500), nullable=False, unique=True, index=True)
+    signal_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    value: Mapped[float] = mapped_column(Float, nullable=False)
+    evidence: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    provider: Mapped[str | None] = mapped_column(String(100))
+    confidence: Mapped[float | None] = mapped_column(Float)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)

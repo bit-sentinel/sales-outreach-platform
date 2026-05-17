@@ -219,6 +219,9 @@ class LeadService:
             "email": "email", "email_address": "email", "emailaddress": "email",
             "work_email": "email", "business_email": "email",
             "customer_email": "email",
+            # full contact name (will be split below)
+            "customer_name": "full_name", "contact_name": "full_name",
+            "full_name": "full_name", "fullname": "full_name",
             # title / job title
             "title": "title", "job_title": "title", "jobtitle": "title",
             "position": "title", "role": "title",
@@ -230,10 +233,12 @@ class LeadService:
             # linkedin
             "linkedin": "linkedin_url", "linkedin_url": "linkedin_url",
             "linkedin_profile": "linkedin_url",
-            # location / city
+            # location / region  ("Country Region" column maps here)
             "location": "location", "city": "location", "state": "location",
             "country": "location", "region": "location",
-            # company name
+            "country_region": "location",
+            # company name  ("Name" column in the Cvent sheet = company name)
+            "name": "company_name",
             "company": "company_name", "company_name": "company_name",
             "organization": "company_name", "organisation": "company_name",
             "account": "company_name", "account_name": "company_name",
@@ -245,6 +250,9 @@ class LeadService:
             # employee count
             "employees": "employee_count", "employee_count": "employee_count",
             "company_size": "employee_count", "headcount": "employee_count",
+            # Cvent-specific fields
+            "named_acct": "named_acct",
+            "success_experience": "success_experience",
             # source / tags
             "source": "source", "lead_source": "source",
             "tags": "tags", "tag": "tags", "label": "tags",
@@ -283,12 +291,7 @@ class LeadService:
                 first = row.get("first_name", "")
                 last = row.get("last_name", "")
                 if not first and not last:
-                    # Try splitting on a "name" column if present
-                    full = next(
-                        (str(v).strip() for k, v in raw_row.items()
-                         if norm(k) in ("name", "full_name", "contact_name", "fullname", "customer_name") and v),
-                        ""
-                    )
+                    full = row.get("full_name", "").strip()
                     parts = full.split(" ", 1)
                     first = parts[0] if parts else "Unknown"
                     last = parts[1] if len(parts) > 1 else ""
@@ -306,7 +309,16 @@ class LeadService:
 
                     if existing_co:
                         company_id = existing_co.id
+                        # Update named_acct if provided and not already set
+                        named_acct = row.get("named_acct") or None
+                        if named_acct:
+                            cf = dict(existing_co.custom_fields or {})
+                            cf["named_acct"] = named_acct
+                            existing_co.custom_fields = cf
                     else:
+                        company_custom: dict[str, Any] = {}
+                        if row.get("named_acct"):
+                            company_custom["named_acct"] = row["named_acct"]
                         co = Company(
                             tenant_id=self.tenant_id,
                             name=company_name,
@@ -314,6 +326,7 @@ class LeadService:
                             industry=row.get("industry") or None,
                             employee_count=int(row["employee_count"]) if row.get("employee_count", "").isdigit() else None,
                             location=row.get("location") or None,
+                            custom_fields=company_custom or None,
                         )
                         self.db.add(co)
                         await self.db.flush()
@@ -329,7 +342,16 @@ class LeadService:
 
                 if existing_ct:
                     contact_id = existing_ct.id
+                    # Update success_experience if provided and not already set
+                    success_exp = row.get("success_experience") or None
+                    if success_exp:
+                        cf = dict(existing_ct.custom_fields or {})
+                        cf["success_experience"] = success_exp
+                        existing_ct.custom_fields = cf
                 else:
+                    contact_custom: dict[str, Any] = {}
+                    if row.get("success_experience"):
+                        contact_custom["success_experience"] = row["success_experience"]
                     contact = Contact(
                         tenant_id=self.tenant_id,
                         company_id=company_id,
@@ -341,6 +363,7 @@ class LeadService:
                         phone=row.get("phone") or None,
                         linkedin_url=row.get("linkedin_url") or None,
                         location=row.get("location") or None,
+                        custom_fields=contact_custom or None,
                     )
                     self.db.add(contact)
                     await self.db.flush()
@@ -383,22 +406,42 @@ class LeadService:
 
         # Auto-trigger enrichment for all newly imported leads
         if new_lead_ids:
-            from app.tasks.enrichment_tasks import run_enrichment_pipeline
-            from app.models.lead import EnrichmentJob
-            for lead_id in new_lead_ids:
-                job_map: dict[str, str] = {}
-                for etype in ["web_research", "company", "scoring"]:
-                    job = EnrichmentJob(
-                        tenant_id=self.tenant_id,
-                        lead_id=lead_id,
-                        job_type=etype,
-                        status="pending",
-                    )
-                    self.db.add(job)
-                    await self.db.flush()
-                    job_map[etype] = str(job.id)
-                await self.db.commit()
-                run_enrichment_pipeline.delay(str(lead_id), str(self.tenant_id), job_map)
+            from app.config import get_settings
+            _settings = get_settings()
+            if _settings.use_signal_pipeline:
+                from app.tasks.signal_tasks import run_signal_pipeline
+                from app.models.lead import EnrichmentJob
+                for lead_id in new_lead_ids:
+                    job_map: dict[str, str] = {}
+                    for etype in ["signal_pipeline"]:
+                        job = EnrichmentJob(
+                            tenant_id=self.tenant_id,
+                            lead_id=lead_id,
+                            job_type=etype,
+                            status="pending",
+                        )
+                        self.db.add(job)
+                        await self.db.flush()
+                        job_map[etype] = str(job.id)
+                    await self.db.commit()
+                    run_signal_pipeline.delay(str(lead_id), str(self.tenant_id), job_map)
+            else:
+                from app.tasks.enrichment_tasks import run_enrichment_pipeline
+                from app.models.lead import EnrichmentJob
+                for lead_id in new_lead_ids:
+                    job_map: dict[str, str] = {}
+                    for etype in ["web_research", "company", "scoring"]:
+                        job = EnrichmentJob(
+                            tenant_id=self.tenant_id,
+                            lead_id=lead_id,
+                            job_type=etype,
+                            status="pending",
+                        )
+                        self.db.add(job)
+                        await self.db.flush()
+                        job_map[etype] = str(job.id)
+                    await self.db.commit()
+                    run_enrichment_pipeline.delay(str(lead_id), str(self.tenant_id), job_map)
 
         return batch
 

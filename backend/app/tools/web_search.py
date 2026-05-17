@@ -13,20 +13,10 @@ continues with partial results.
 """
 
 import logging
-from dataclasses import dataclass, field
-from typing import Any
+
+from app.tools.search_types import SearchResult
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class SearchResult:
-    title: str
-    url: str
-    content: str                  # snippet or full page text
-    source: str                   # "tavily" | "firecrawl" | "serpapi"
-    score: float = 0.0            # relevance score when provided by the API
-    raw: dict[str, Any] = field(default_factory=dict)
 
 
 # ── Tavily ────────────────────────────────────────────────────────────────────

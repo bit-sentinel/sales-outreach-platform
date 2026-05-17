@@ -19,6 +19,54 @@ def _make_session_factory():
     return async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
+def _apply_identity_profile(company, contact, identity_profile: dict) -> None:
+    """Back-fill company/contact records from a resolved Apollo identity profile."""
+    if not identity_profile:
+        return
+
+    organization = identity_profile.get("organization") or {}
+    if contact:
+        first_name = identity_profile.get("first_name")
+        last_name = identity_profile.get("last_name")
+        if first_name and not contact.first_name:
+            contact.first_name = first_name
+        if last_name and not contact.last_name:
+            contact.last_name = last_name
+        if identity_profile.get("title") and not contact.title:
+            contact.title = identity_profile["title"]
+        if identity_profile.get("department") and not contact.department:
+            value = identity_profile["department"]
+            if isinstance(value, list):
+                value = ", ".join(str(item) for item in value if item)
+            contact.department = str(value)
+        if identity_profile.get("phone") and not contact.phone:
+            contact.phone = identity_profile["phone"]
+        if identity_profile.get("linkedin_url") and not contact.linkedin_url:
+            contact.linkedin_url = identity_profile["linkedin_url"]
+
+    if company:
+        domain = organization.get("domain") or organization.get("website_url")
+        if domain and not company.domain:
+            company.domain = str(domain).replace("https://", "").replace("http://", "").strip("/")
+        if organization.get("linkedin_url") and not company.linkedin_url:
+            company.linkedin_url = organization["linkedin_url"]
+        if organization.get("website_url") and not company.website_url:
+            company.website_url = organization["website_url"]
+        if organization.get("employee_count") and not company.employee_count:
+            try:
+                company.employee_count = int(organization["employee_count"])
+            except (TypeError, ValueError):
+                pass
+        industry = organization.get("industry")
+        if industry and not company.industry:
+            if isinstance(industry, list):
+                industry = ", ".join(str(item) for item in industry if item)
+            company.industry = str(industry)
+        description = organization.get("short_description")
+        if description and not company.description:
+            company.description = description
+
+
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=60, queue="enrichment")
 def run_enrichment_pipeline(self, lead_id: str, tenant_id: str, job_ids: list):
     """
@@ -85,6 +133,32 @@ async def _run_pipeline_async(lead_id: str, tenant_id: str, job_ids: dict):
             f"{contact.first_name} {contact.last_name}".strip() if contact else None
         )
 
+        identity_profile: dict = {}
+        if contact and contact.email:
+            from app.config import get_settings
+            from app.tools.apollo import enrich_person_by_email
+
+            settings = get_settings()
+            if settings.apollo_api_key:
+                identity_profile = await enrich_person_by_email(contact.email, settings.apollo_api_key)
+                if identity_profile:
+                    _apply_identity_profile(company, contact, identity_profile)
+                    db.add(EnrichmentData(
+                        tenant_id=tenant_uuid,
+                        lead_id=lead_uuid,
+                        data_type="identity_profile",
+                        provider="apollo",
+                        data=identity_profile,
+                        confidence=1.0,
+                    ))
+                    await db.commit()
+
+                    if company and company.domain:
+                        company.domain = company.domain.replace("https://", "").replace("http://", "").strip("/")
+                    contact_full_name = (
+                        f"{contact.first_name} {contact.last_name}".strip() if contact else None
+                    )
+
         # ── Step 1: Web Research ────────────────────────────────────
         research_output: dict = {}
         if "web_research" in job_map:
@@ -100,6 +174,7 @@ async def _run_pipeline_async(lead_id: str, tenant_id: str, job_ids: dict):
                     company_name=company.name if company else None,
                     domain=company.domain if company else None,
                     contact_name=contact_full_name,
+                    linkedin_url=contact.linkedin_url if contact else None,
                 )
                 # Persist ResearchData record
                 if research_output and not research_output.get("parse_error"):
@@ -112,6 +187,17 @@ async def _run_pipeline_async(lead_id: str, tenant_id: str, job_ids: dict):
                         relevance_score=research_output.get("relevance_score"),
                         metadata_=research_output,
                     ))
+                    for page in research_output.get("cvent_event_pages", [])[:3]:
+                        db.add(ResearchData(
+                            tenant_id=tenant_uuid,
+                            lead_id=lead_uuid,
+                            source="cvent_event_page",
+                            url=page.get("url"),
+                            title=page.get("title") or page.get("name") or "Cvent event page",
+                            content=page.get("note") or page.get("snippet") or "",
+                            relevance_score=research_output.get("relevance_score"),
+                            metadata_=page,
+                        ))
                     db.add(AIInsight(
                         tenant_id=tenant_uuid,
                         lead_id=lead_uuid,
@@ -144,6 +230,8 @@ async def _run_pipeline_async(lead_id: str, tenant_id: str, job_ids: dict):
                     "contact_name": contact_full_name,
                     "contact_email": contact.email if contact else None,
                     "contact_title": contact.title if contact else None,
+                    "linkedin_url": contact.linkedin_url if contact else None,
+                    "identity_profile": identity_profile or None,
                 }
                 enrichment_output = await agent.run(
                     lead_id=lead_id,
@@ -178,6 +266,18 @@ async def _run_pipeline_async(lead_id: str, tenant_id: str, job_ids: dict):
                         description = company_info.get("description")
                         if description and not company.description:
                             company.description = description if isinstance(description, str) else str(description)
+                        employee_count = company_info.get("employee_count") or company_info.get("employee_count_estimate")
+                        if employee_count and not company.employee_count:
+                            try:
+                                company.employee_count = int(employee_count)
+                            except (TypeError, ValueError):
+                                pass
+                        location = company_info.get("headquarters") or company_info.get("location")
+                        if location and not company.location:
+                            company.location = str(location)
+                        linkedin_url = company_info.get("linkedin_url")
+                        if linkedin_url and not company.linkedin_url:
+                            company.linkedin_url = str(linkedin_url)
                     # Back-fill contact title/department
                     contact_info = enrichment_output.get("contact", {})
                     if contact and contact_info:
@@ -187,6 +287,12 @@ async def _run_pipeline_async(lead_id: str, tenant_id: str, job_ids: dict):
                         seniority = contact_info.get("seniority")
                         if seniority and not contact.title:
                             contact.title = seniority if isinstance(seniority, str) else seniority.get("level") or str(seniority)
+                        if contact_info.get("linkedin_url") and not contact.linkedin_url:
+                            contact.linkedin_url = str(contact_info.get("linkedin_url"))
+                        if contact_info.get("phone") and not contact.phone:
+                            contact.phone = str(contact_info.get("phone"))
+                        if contact_info.get("location") and not contact.location:
+                            contact.location = str(contact_info.get("location"))
                 job.status = "completed"
                 job.output_data = enrichment_output
                 job.completed_at = datetime.now(timezone.utc)
@@ -209,7 +315,10 @@ async def _run_pipeline_async(lead_id: str, tenant_id: str, job_ids: dict):
                     "contact_name": contact_full_name,
                     "contact_email": contact.email if contact else None,
                     "contact_title": contact.title if contact else None,
+                    "contact_department": contact.department if contact else None,
+                    "employee_count": company.employee_count if company else None,
                     "source": lead.source,
+                    "identity_profile": identity_profile or None,
                 }
                 scoring_output = await agent.run(
                     lead_id=lead_id,

@@ -37,6 +37,7 @@ celery_app.conf.update(
     # Task routing – separate queues for different workload types
     task_routes={
         "app.tasks.enrichment_tasks.*": {"queue": "enrichment"},
+        "app.tasks.signal_tasks.*":     {"queue": "enrichment"},
         "app.tasks.email_tasks.*": {"queue": "email"},
         "app.tasks.campaign_tasks.*": {"queue": "campaign"},
         "app.tasks.ai_tasks.*": {"queue": "ai"},
@@ -81,5 +82,6 @@ celery_app.conf.update(
 
 # Explicitly import task modules so they register with the Celery app
 import app.tasks.enrichment_tasks  # noqa: F401
+import app.tasks.signal_tasks      # noqa: F401
 import app.tasks.campaign_tasks  # noqa: F401
 import app.tasks.email_tasks  # noqa: F401

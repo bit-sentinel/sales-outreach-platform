@@ -5,6 +5,7 @@ Campaign execution Celery tasks – process follow-ups, execute sequences.
 import asyncio
 
 from app.celery_app import celery_app
+from app.tasks.personalization_payloads import build_personalization_payload
 
 
 def _make_session_factory():
@@ -19,8 +20,6 @@ def _make_session_factory():
         pool_pre_ping=True,
     )
     return async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
-
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=60)
 def execute_campaign(self, campaign_id: str):
     """Launch campaign – generate personalized emails for all leads in the campaign."""
@@ -162,25 +161,21 @@ async def _process_campaign_lead_async(campaign_lead_id: str):
                 select(AIInsight).where(AIInsight.lead_id == lead.id).order_by(AIInsight.created_at.desc()).limit(10)
             )
             insights_rows = insight_result.scalars().all()
-            if insights_rows:
-                research_data = "\n".join(
-                    f"[{r.insight_type}] {r.content}" for r in insights_rows if r.content
-                )
             # Also pull raw research data (events, news found by research agent)
             research_result = await db.execute(
                 select(ResearchDataModel).where(ResearchDataModel.lead_id == lead.id).order_by(ResearchDataModel.created_at.desc()).limit(5)
             )
             research_rows = research_result.scalars().all()
-            if research_rows:
-                snippets = [f"[{r.source}] {r.title}: {(r.content or '')[:300]}" for r in research_rows if r.title]
-                research_data = (research_data or "") + ("\n" if research_data else "") + "\n".join(snippets)
             # Pull structured enrichment data
             enrich_result = await db.execute(
-                select(EnrichmentData).where(EnrichmentData.lead_id == lead.id).limit(3)
+                select(EnrichmentData).where(EnrichmentData.lead_id == lead.id).order_by(EnrichmentData.created_at.desc()).limit(10)
             )
             enrich_rows = enrich_result.scalars().all()
-            if enrich_rows:
-                enrichment_data = str({r.data_type: r.data for r in enrich_rows})
+            research_data, enrichment_data = build_personalization_payload(
+                insights_rows,
+                research_rows,
+                enrich_rows,
+            )
 
         # Sender info — default from settings, override from SenderAccount if linked
         from app.config import get_settings as _get_settings

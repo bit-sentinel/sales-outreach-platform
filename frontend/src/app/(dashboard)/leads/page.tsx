@@ -824,7 +824,7 @@ function LeadsPageInner() {
 
         <p className="mt-4 text-[11px] text-white/25 leading-relaxed">
           <FileSpreadsheet className="inline h-3 w-3 mr-1 -mt-px" />
-          CSV / XLSX accepted — minimum columns: <span className="text-white/40">Company Name · Customer Name · Customer Email</span>. Enrichment agents fill the rest automatically.
+          CSV / XLSX accepted — minimum columns: <span className="text-white/40">Name · Customer Name · Customer Email</span>. Optional: Named Acct · Success Experience · Country Region. Enrichment agents fill the rest automatically.
         </p>
       </section>
 

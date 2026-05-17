@@ -60,6 +60,8 @@ class Settings(BaseSettings):
     llm_monthly_budget_usd: float = 500.0
 
     # ── Web Research ─────────────────────────────────────
+    apollo_api_key: str = ""
+    perplexity_api_key: str = ""
     serpapi_api_key: str = ""
     firecrawl_api_key: str = ""
     tavily_api_key: str = ""
@@ -87,6 +89,11 @@ class Settings(BaseSettings):
     gmail_app_password: str = ""
     # SendGrid Inbound Parse webhook secret (appended as ?secret= in webhook URL)
     sendgrid_webhook_secret: str = ""
+
+    # ── Signal pipeline (v2) ─────────────────────────────
+    # Set to True to route new leads through run_signal_pipeline instead of run_enrichment_pipeline.
+    # v1 (run_enrichment_pipeline) remains unchanged and is still used when this flag is False.
+    use_signal_pipeline: bool = True
 
     # ── Celery ───────────────────────────────────────────
     celery_broker_url: str = "redis://localhost:6379/1"

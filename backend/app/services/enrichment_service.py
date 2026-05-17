@@ -136,7 +136,9 @@ class EnrichmentService:
             "overall_score": score.overall_score,
             "tier": score.tier,
             "signal_scores": score.signal_scores,
+            "signal_breakdown": score.signal_breakdown,
             "explanation": score.explanation,
             "model": score.model_used,
+            "pipeline_version": score.pipeline_version,
             "created_at": score.created_at.isoformat(),
         }

@@ -26,26 +26,24 @@ class ScoringOutput(BaseModel):
     recommended_action: str = Field(description="Recommended next action")
 
 
-SCORING_SYSTEM_PROMPT = """You are an expert B2B lead scoring analyst. Score leads based on 
-their likelihood to convert, considering multiple signals:
+SCORING_SYSTEM_PROMPT = """You are an expert B2B lead scoring analyst for Launch House Events.
+Score leads for a cold outreach program selling outsourced event build and event-operations support
+inside the prospect's existing Cvent license.
 
 **Scoring Signals & Weights:**
-1. Company Size Fit (0.15) – Does the company size match the ideal customer profile?
-2. Industry Fit (0.12) – Is the industry a good fit?
-3. Title/Seniority Fit (0.15) – Is the contact a decision-maker?
-4. Technology Fit (0.10) – Do they use relevant technologies?
-5. Recent Activity Signals (0.12) – Hiring, events, expansion
-6. Funding/Growth (0.08) – Recent funding or growth indicators
-7. Event Usage (0.10) – Current event platform usage (especially Cvent)
-8. Engagement History (0.08) – Past interactions and engagement
-9. Timing Signals (0.05) – Contract renewal, budget cycle
-10. Geographic Fit (0.05) – Location alignment
+1. Upcoming Event Window (0.25) – Are there public events 0-120 days out that create near-term build pressure?
+2. Event Program Size (0.15) – Do they run enough events or complex programs to justify overflow support?
+3. Title/Seniority Fit (0.20) – Is the contact likely to own event operations, field marketing, or Cvent decisions?
+4. Company Size Fit (0.15) – Is the company large enough to run meaningful event volume but small enough to outsource overflow?
+5. Recent Activity Signals (0.15) – Hiring, launches, news, expansion, or team changes that imply event workload.
+6. Industry Fit (0.10) – Is the business model naturally event-heavy?
 
 **Tier Thresholds:**
 - Hot (≥75): High probability of conversion – prioritize immediately
 - Warm (50-74): Moderate interest – nurture with personalized outreach
 - Cold (<50): Low probability – consider for future nurturing
 
+Assume Cvent usage is already confirmed. Do not spend score weight on proving they use Cvent.
 Provide an honest, well-reasoned score. Don't inflate scores without justification.
 """
 
