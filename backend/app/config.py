@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     openai_embedding_model: str = "text-embedding-3-small"
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-3-5-sonnet-20241022"
-    anthropic_fast_model: str = "claude-3-5-haiku-20241022"
+    anthropic_fast_model: str = "claude-haiku-4-5-20251001"
     llm_max_retries: int = 3
     llm_request_timeout: int = 60
     llm_monthly_budget_usd: float = 500.0
@@ -94,12 +94,12 @@ class Settings(BaseSettings):
     # ── Signal pipeline (v2) ─────────────────────────────
     # Set to True to route new leads through run_signal_pipeline instead of run_enrichment_pipeline.
     # v1 (run_enrichment_pipeline) remains unchanged and is still used when this flag is False.
-    use_signal_pipeline: bool = True
+    use_signal_pipeline: bool = False
 
     # ── Pipeline version selector ────────────────────────
     # "v1" = legacy LLM scorer, "v2" = signal pipeline, "v3" = event intelligence engine.
     # When "v3", EnrichmentService dispatches orchestrate_event_intelligence.
-    pipeline_version: str = "v2"
+    pipeline_version: str = "v3"
 
     # ── Celery ───────────────────────────────────────────
     celery_broker_url: str = "redis://localhost:6379/1"
