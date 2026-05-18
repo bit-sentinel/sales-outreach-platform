@@ -101,6 +101,14 @@ class Settings(BaseSettings):
     # When "v3", EnrichmentService dispatches orchestrate_event_intelligence.
     pipeline_version: str = "v3"
 
+    # ── Cvent customer assumption ─────────────────────────
+    # When True, all leads are treated as confirmed Cvent customers regardless of
+    # whether the web-search detection finds a Cvent page.  Effects:
+    #   • Gate 1: CVENT check is bypassed (leads are never cut on cvent alone)
+    #   • Scoring: CVENT signal gets a baseline urgency of 0.40 when detection returns
+    #     0, representing "confirmed customer, upcoming event timing not found"
+    assume_cvent_customer: bool = False
+
     # ── Celery ───────────────────────────────────────────
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"

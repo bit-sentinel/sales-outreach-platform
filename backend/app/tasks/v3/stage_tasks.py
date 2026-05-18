@@ -234,7 +234,10 @@ async def _run_score_stage(run_id: UUID, lead_id: UUID) -> bool:
     results = _load_upstream(run_id)
 
     agg = EvidenceAggregator().aggregate(results)
-    score = ScoringEngine().score(results, agg["completeness"])
+    score = ScoringEngine().score(
+        results, agg["completeness"],
+        assume_cvent_customer=get_settings().assume_cvent_customer,
+    )
 
     async with session_factory() as session:
         lead = (await session.execute(select(Lead).where(Lead.id == lead_id))).scalar_one()
@@ -367,7 +370,9 @@ def _make_stage_task(stage: PipelineStage):
             asyncio.run(_run_collection_stage(stage, rid, lid))
 
             if stage is PipelineStage.EVENT_FIT:
-                passed, reason = gate1_event_fit(_load_upstream(rid))
+                passed, reason = gate1_event_fit(
+                    _load_upstream(rid), get_settings().assume_cvent_customer
+                )
                 if not passed:
                     asyncio.run(_finalize_disqualified(rid, lid, reason or "gate1"))
                     return
@@ -476,7 +481,10 @@ async def _rescore_async(lead_id: UUID) -> dict:
         return {"status": "skipped", "reason": "no_cached_signals"}
 
     agg = EvidenceAggregator().aggregate(results)
-    score = ScoringEngine().score(results, agg["completeness"])
+    score = ScoringEngine().score(
+        results, agg["completeness"],
+        assume_cvent_customer=get_settings().assume_cvent_customer,
+    )
 
     async with session_factory() as session:
         lead = (await session.execute(

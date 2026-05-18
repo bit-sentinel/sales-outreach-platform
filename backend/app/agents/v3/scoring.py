@@ -191,10 +191,21 @@ class EvidenceAggregator:
 class ScoringEngine:
     """Deterministic weighted scorer. confidence down-weights each signal."""
 
+    # Baseline urgency applied to confirmed Cvent customers when web-search
+    # detection finds no upcoming event.  0.40 = "known customer, timing unknown".
+    CVENT_CUSTOMER_BASELINE = 0.40
+    CVENT_CUSTOMER_BASELINE_CONF = 0.85
+
     def score(
-        self, results: dict[SignalType, AgentResult], completeness: float
+        self,
+        results: dict[SignalType, AgentResult],
+        completeness: float,
+        assume_cvent_customer: bool = False,
     ) -> ScoreResult:
         urgency_v = _signal_value(SignalType.CVENT, results)
+        if urgency_v == 0.0 and assume_cvent_customer:
+            urgency_v = self.CVENT_CUSTOMER_BASELINE
+
         persona_v = _persona_value(results)
         outsourcing_r = results.get(SignalType.OUTSOURCING)
         outsourcing_v = outsourcing_r.value if (outsourcing_r and outsourcing_r.is_usable()) else 0.0
@@ -213,6 +224,17 @@ class ScoringEngine:
                 hashes = [e.content_hash for e in r.evidence]
                 rationale = (r.evidence[0].claim if r.evidence
                              else f"{signal.value} signal")
+                # Agent ran but detected nothing: apply baseline for confirmed customers
+                if signal == SignalType.CVENT and assume_cvent_customer and value == 0.0:
+                    value = self.CVENT_CUSTOMER_BASELINE
+                    conf = self.CVENT_CUSTOMER_BASELINE_CONF
+                    rationale = "Confirmed Cvent customer (import data) — upcoming event timing not detected"
+            elif signal == SignalType.CVENT and assume_cvent_customer:
+                # Agent didn't run at all — still apply baseline
+                value = self.CVENT_CUSTOMER_BASELINE
+                conf = self.CVENT_CUSTOMER_BASELINE_CONF
+                hashes = []
+                rationale = "Confirmed Cvent customer (import data) — upcoming event timing not detected"
             else:
                 value, conf, hashes = 0.0, 0.0, []
                 rationale = f"{signal.value} signal unavailable"
@@ -250,10 +272,17 @@ class ScoringEngine:
 
 
 # ── Gates ──────────────────────────────────────────────────────────────────
-def gate1_event_fit(results: dict[SignalType, AgentResult]) -> tuple[bool, str | None]:
+def gate1_event_fit(
+    results: dict[SignalType, AgentResult],
+    assume_cvent_customer: bool = False,
+) -> tuple[bool, str | None]:
     """
     After Stage 2. Disqualify a lead only when ALL event-fit evidence is weak:
     no Cvent, low event volume, and off-ICP industry. Saves Stages 3-6.
+
+    When assume_cvent_customer is True the Cvent check is bypassed — the lead
+    is a confirmed Cvent customer from the import data, so web-search detection
+    failure is not a disqualifying signal.
     """
     cvent = results.get(SignalType.CVENT)
     volume = results.get(SignalType.EVENT_VOLUME)
@@ -262,6 +291,10 @@ def gate1_event_fit(results: dict[SignalType, AgentResult]) -> tuple[bool, str |
     cvent_v = cvent.value if cvent and cvent.is_usable() else 0.0
     volume_v = volume.value if volume and volume.is_usable() else 0.0
     industry_v = org.value if org and org.is_usable() else 0.0
+
+    # Confirmed customer: treat as if cvent evidence is present
+    if assume_cvent_customer:
+        cvent_v = max(cvent_v, GATE1_MIN_CVENT + 0.01)
 
     if (cvent_v < GATE1_MIN_CVENT and volume_v < GATE1_MIN_VOLUME
             and industry_v < GATE1_MIN_INDUSTRY):
