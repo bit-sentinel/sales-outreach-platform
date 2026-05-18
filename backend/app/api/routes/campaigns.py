@@ -298,12 +298,46 @@ async def update_campaign_message(
         message.subject = body["subject"]
     if "body_text" in body:
         message.body_text = body["body_text"]
-        # Rebuild HTML from plain text so SendGrid renders it properly
-        html_body = "<br>".join(
-            ("<b>" + line + "</b>" if line.strip() == "" else line)
-            for line in (body["body_text"] or "").splitlines()
-        )
-        message.body_html = f'<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#222">{html_body}</div>'
+        # Re-wrap in LaunchHouse branded template
+        try:
+            from app.tools.email_renderer import render_email_html, render_email_plain
+            from app.models.campaign import SenderAccount
+            sender_name = "LaunchHouse Team"
+            sender_company = "LaunchHouse Events"
+            sender_role = "Cvent Registration & Event Technology Operations"
+            sender_site_url = "https://launchhouse.events/"
+            sender_calendar_link = ""
+            if message.sender_account_id:
+                sa_res = await db.execute(
+                    select(SenderAccount).where(SenderAccount.id == message.sender_account_id)
+                )
+                sa = sa_res.scalar_one_or_none()
+                if sa:
+                    sender_name = sa.display_name or sender_name
+                    sender_company = "LaunchHouse Events"
+            message.body_html = render_email_html(
+                body_text=body["body_text"],
+                sender_name=sender_name,
+                sender_company=sender_company,
+                sender_role=sender_role,
+                sender_site_url=sender_site_url,
+                sender_calendar_link=sender_calendar_link,
+            )
+            message.body_text = render_email_plain(
+                body_text=body["body_text"],
+                sender_name=sender_name,
+                sender_site_url=sender_site_url,
+                sender_calendar_link=sender_calendar_link,
+            )
+        except Exception:
+            # Fallback: minimal safe HTML
+            import html as _html
+            escaped = _html.escape(body["body_text"] or "")
+            lines = escaped.replace("\n", "<br>")
+            message.body_html = (
+                f'<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;'
+                f'line-height:1.6;color:#1E293B;">{lines}</div>'
+            )
 
     await db.commit()
     await db.refresh(message)

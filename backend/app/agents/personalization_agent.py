@@ -639,18 +639,18 @@ Use the template playbook below to select the right template and fill in all tok
             _sender_site = _sender.get("site_url") or _sender.get("company_site_url") or "https://launchhouse.events/"
             _sender_cal = _sender.get("calendar_link") or _sender.get("sender_calendar_link") or ""
 
-            # Use compact signature for senior contacts (Director+)
+            # All 4 core sequence templates use slim header per spec
+            _step = step_config.get("step", 1) if step_config else 1
+            _header = HeaderStyle.SLIM
+
+            # Use compact signature for senior contacts (Director+) OR steps 3+ (Day 9 Bump, Day 20 Break-up)
             _lead = lead_data or {}
             if isinstance(_lead, str):
                 _lead_lower = _lead.lower()
-                _compact = any(t in _lead_lower for t in ("director", "vp ", "vice president", "head of", "chief", " coo", " cmo", " cto", " ceo"))
+                _compact = _step >= 3 or any(t in _lead_lower for t in ("director", "vp ", "vice president", "head of", "chief", " coo", " cmo", " cto", " ceo"))
             else:
                 _title = str(_lead.get("title", "") or _lead.get("job_title", "")).lower()
-                _compact = any(t in _title for t in ("director", "vp ", "vice president", "head of", "chief", "coo", "cmo", "cto", "ceo"))
-
-            # Choose header: premium for follow-ups / replies, slim for cold outreach
-            _step = step_config.get("step", 1) if step_config else 1
-            _header = HeaderStyle.PREMIUM if _step > 2 else HeaderStyle.SLIM
+                _compact = _step >= 3 or any(t in _title for t in ("director", "vp ", "vice president", "head of", "chief", "coo", "cmo", "cto", "ceo"))
 
             branded_html = render_email_html(
                 body_text=raw_body,

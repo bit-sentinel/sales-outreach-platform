@@ -348,10 +348,7 @@ async def _process_campaign_lead_async(campaign_lead_id: str):
             )
             await db.commit()
 
-        # Follow-ups (step > 0) auto-send; initial emails (step 0) stay as draft for reviewer approval
-        if current_step > 0:
-            from app.tasks.email_tasks import send_email
-            send_email.delay(message_id_str)
+        # All emails remain as drafts regardless of step — manual send required
 
 
 @celery_app.task
