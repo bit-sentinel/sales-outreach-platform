@@ -223,6 +223,63 @@ async def _run_collection_stage(stage: PipelineStage, run_id: UUID, lead_id: UUI
     logger.info("[v3] stage %s — %s", stage.value,
                 {r.signal_type.value: r.status.value for r in results})
 
+    # Write identity fields back to contacts/companies after Stage 1
+    if stage is PipelineStage.IDENTITY:
+        identity_r = by_signal.get(SignalType.IDENTITY)
+        if identity_r and identity_r.is_usable():
+            await _writeback_identity(lead_id, identity_r.payload)
+
+
+async def _writeback_identity(lead_id: UUID, payload: dict) -> None:
+    """Persist enriched identity fields to contacts/companies rows."""
+    from sqlalchemy import select
+    from app.models.lead import Lead, Contact, Company
+    from sqlalchemy.orm.attributes import flag_modified
+
+    session_factory = _session_factory()
+    async with session_factory() as session:
+        lead = (await session.execute(
+            select(Lead).where(Lead.id == lead_id))).scalar_one_or_none()
+        if not lead:
+            return
+        contact = (await session.execute(
+            select(Contact).where(Contact.id == lead.contact_id))).scalar_one_or_none()
+        company = (await session.execute(
+            select(Company).where(Company.id == lead.company_id))).scalar_one_or_none()
+
+        if contact:
+            if payload.get("seniority") and not contact.seniority:
+                contact.seniority = str(payload["seniority"])
+            if payload.get("twitter_url") and not contact.twitter_url:
+                contact.twitter_url = str(payload["twitter_url"])
+            if payload.get("location") and not contact.location:
+                contact.location = str(payload["location"])
+            new_skills = payload.get("skills") or []
+            if new_skills and not contact.skills:
+                contact.skills = new_skills
+                flag_modified(contact, "skills")
+            new_interests = payload.get("interests") or []
+            if new_interests and not contact.interests:
+                contact.interests = new_interests
+                flag_modified(contact, "interests")
+            if payload.get("phone") and not contact.phone:
+                contact.phone = str(payload["phone"])
+            if payload.get("linkedin_url") and not contact.linkedin_url:
+                contact.linkedin_url = str(payload["linkedin_url"])
+
+        if company:
+            if payload.get("company_employee_range") and not company.employee_range:
+                company.employee_range = str(payload["company_employee_range"])
+            if payload.get("company_founded_year") and not company.founded_year:
+                try:
+                    company.founded_year = int(payload["company_founded_year"])
+                except (TypeError, ValueError):
+                    pass
+            if payload.get("company_domain") and not company.domain:
+                company.domain = str(payload["company_domain"])
+
+        await session.commit()
+
 
 async def _run_score_stage(run_id: UUID, lead_id: UUID) -> bool:
     """Stage 5 — aggregate, score, persist lead_scores + breakdown. Returns gate2."""

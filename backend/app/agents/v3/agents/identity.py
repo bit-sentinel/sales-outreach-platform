@@ -74,9 +74,15 @@ class IdentityAgent(BaseIntelligenceAgent):
             "seniority": profile.get("seniority"),
             "department": profile.get("department"),
             "linkedin_url": profile.get("linkedin_url"),
+            "twitter_url": profile.get("twitter_url"),
             "phone": profile.get("phone"),
+            "location": profile.get("location"),
+            "skills": profile.get("skills") or [],
+            "interests": profile.get("interests") or [],
             "company_domain": org.get("domain"),
             "company_employee_count": org.get("employee_count"),
+            "company_employee_range": org.get("employee_range"),
+            "company_founded_year": org.get("founded_year"),
         }
         evidence = [EvidenceItem(
             claim=f"Identity resolved via {provider}: "

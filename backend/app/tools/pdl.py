@@ -51,6 +51,30 @@ def _normalize_pdl_person(data: dict[str, Any], fallback_email: str) -> dict[str
     if co_linkedin and not co_linkedin.startswith("http"):
         co_linkedin = f"https://{co_linkedin}"
 
+    twitter = person.get("twitter_url") or None
+    if isinstance(twitter, str) and twitter and not twitter.startswith("http"):
+        twitter = f"https://twitter.com/{twitter.lstrip('@')}"
+
+    # location_locality is gated on free tier (returns True); location_country is available
+    loc_city = person.get("location_locality") if isinstance(person.get("location_locality"), str) else None
+    loc_country = person.get("location_country") if isinstance(person.get("location_country"), str) else None
+    location_str: str | None = None
+    if loc_city and loc_country:
+        location_str = f"{loc_city}, {loc_country}"
+    elif loc_country:
+        location_str = loc_country
+
+    skills = [s for s in (person.get("skills") or []) if isinstance(s, str)]
+    interests = [i for i in (person.get("interests") or []) if isinstance(i, str)]
+
+    co_size = person.get("job_company_size") or None
+    co_founded = person.get("job_company_founded") or None
+    if co_founded is not None:
+        try:
+            co_founded = int(co_founded)
+        except (TypeError, ValueError):
+            co_founded = None
+
     return {
         "email": person.get("work_email") or fallback_email,
         "first_name": person.get("first_name"),
@@ -60,13 +84,19 @@ def _normalize_pdl_person(data: dict[str, Any], fallback_email: str) -> dict[str
         "seniority": seniority,
         "department": dept,
         "linkedin_url": linkedin,
+        "twitter_url": twitter,
         "phone": phone,
+        "location": location_str,
+        "skills": skills,
+        "interests": interests,
         "organization": {
             "name": person.get("job_company_name"),
             "domain": person.get("job_company_website"),
             "website_url": person.get("job_company_website"),
             "linkedin_url": co_linkedin,
             "employee_count": emp_count,
+            "employee_range": co_size,
+            "founded_year": co_founded,
             "industry": person.get("job_company_industry") or person.get("industry"),
             "keywords": [],
             "technologies": [],

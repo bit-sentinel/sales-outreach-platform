@@ -7,6 +7,7 @@ import {
   Building2,
   CheckCircle2,
   Mail,
+  Phone,
   Globe,
   MapPin,
   RotateCcw,
@@ -64,7 +65,12 @@ interface ContactInfo {
   phone?: string | null;
   title?: string | null;
   department?: string | null;
+  seniority?: string | null;
   linkedin_url?: string | null;
+  twitter_url?: string | null;
+  location?: string | null;
+  skills?: string[] | null;
+  interests?: string[] | null;
 }
 
 interface CompanyInfo {
@@ -72,7 +78,11 @@ interface CompanyInfo {
   industry?: string | null;
   location?: string | null;
   website?: string | null;
+  website_url?: string | null;
+  linkedin_url?: string | null;
   employee_count?: number | null;
+  employee_range?: string | null;
+  founded_year?: number | null;
   revenue?: string | null;
 }
 
@@ -307,7 +317,14 @@ function OverviewTab({ lead, score, events }: { lead: LeadDetail; score: ScoreDa
                 {contact.first_name} {contact.last_name}
               </h3>
               {contact.title && <p className="mt-0.5 text-sm text-slate-400">{contact.title}</p>}
-              {contact.department && <p className="text-xs text-slate-500">{contact.department}</p>}
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {contact.department && (
+                  <span className="rounded-full bg-slate-700/60 px-2 py-0.5 text-xs text-slate-300">{contact.department}</span>
+                )}
+                {contact.seniority && (
+                  <span className="rounded-full bg-indigo-900/50 px-2 py-0.5 text-xs text-indigo-300 capitalize">{contact.seniority}</span>
+                )}
+              </div>
             </div>
             <div className="space-y-1.5 pt-1">
               {contact.email && (
@@ -316,13 +333,54 @@ function OverviewTab({ lead, score, events }: { lead: LeadDetail; score: ScoreDa
                   {contact.email}
                 </a>
               )}
+              {contact.phone && (
+                <a href={`tel:${contact.phone}`} className="flex items-center gap-2 text-sm text-slate-400">
+                  <Phone className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                  {contact.phone}
+                </a>
+              )}
+              {contact.location && (
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                  {contact.location}
+                </div>
+              )}
               {contact.linkedin_url && (
                 <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 hover:underline">
                   <ExternalLink className="h-3.5 w-3.5 shrink-0" />
                   LinkedIn Profile
                 </a>
               )}
+              {contact.twitter_url && (
+                <a href={contact.twitter_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 hover:underline">
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                  Twitter / X
+                </a>
+              )}
             </div>
+            {contact.skills && contact.skills.length > 0 && (
+              <div className="pt-1">
+                <p className="mb-1.5 text-xs text-slate-500 uppercase tracking-wide">Skills</p>
+                <div className="flex flex-wrap gap-1">
+                  {contact.skills.slice(0, 8).map((s) => (
+                    <span key={s} className="rounded-full bg-slate-700/50 px-2 py-0.5 text-xs text-slate-300">{s}</span>
+                  ))}
+                  {contact.skills.length > 8 && (
+                    <span className="rounded-full bg-slate-700/30 px-2 py-0.5 text-xs text-slate-500">+{contact.skills.length - 8} more</span>
+                  )}
+                </div>
+              </div>
+            )}
+            {contact.interests && contact.interests.length > 0 && (
+              <div className="pt-1">
+                <p className="mb-1.5 text-xs text-slate-500 uppercase tracking-wide">Interests</p>
+                <div className="flex flex-wrap gap-1">
+                  {contact.interests.slice(0, 6).map((i) => (
+                    <span key={i} className="rounded-full bg-emerald-900/30 px-2 py-0.5 text-xs text-emerald-400">{i}</span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <p className="text-sm text-slate-500">No contact info</p>
@@ -354,11 +412,25 @@ function OverviewTab({ lead, score, events }: { lead: LeadDetail; score: ScoreDa
                   {company.website}
                 </a>
               )}
-              {company.employee_count && (
+              {(company.employee_count || company.employee_range) && (
                 <div className="flex items-center gap-2 text-sm text-slate-400">
                   <Users className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-                  {company.employee_count.toLocaleString()} employees
+                  {company.employee_range
+                    ? `${company.employee_range} employees`
+                    : `${company.employee_count?.toLocaleString()} employees`}
                 </div>
+              )}
+              {company.founded_year && (
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  <Briefcase className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+                  Founded {company.founded_year}
+                </div>
+              )}
+              {company.linkedin_url && (
+                <a href={company.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 hover:underline">
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                  LinkedIn Page
+                </a>
               )}
             </div>
           </div>

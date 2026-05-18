@@ -32,6 +32,27 @@ def _normalize_apollo_person(data: dict[str, Any], fallback_email: str) -> dict[
         if name:
             technology_names.append(str(name))
 
+    twitter = person.get("twitter_url") or None
+    if isinstance(twitter, str) and twitter and not twitter.startswith("http"):
+        twitter = f"https://twitter.com/{twitter.lstrip('@')}"
+
+    loc_city = person.get("city") or person.get("location_city") or None
+    loc_country = person.get("country") or person.get("location_country") or None
+    location_str: str | None = None
+    if loc_city and loc_country:
+        location_str = f"{loc_city}, {loc_country}"
+    elif loc_city:
+        location_str = loc_city
+    elif loc_country:
+        location_str = loc_country
+
+    co_founded = organization.get("founded_year") or None
+    if co_founded is not None:
+        try:
+            co_founded = int(co_founded)
+        except (TypeError, ValueError):
+            co_founded = None
+
     return {
         "email": person.get("email") or fallback_email,
         "first_name": person.get("first_name"),
@@ -43,13 +64,19 @@ def _normalize_apollo_person(data: dict[str, Any], fallback_email: str) -> dict[
         "seniority": person.get("seniority"),
         "department": person.get("department") or person.get("function") or person.get("functions"),
         "linkedin_url": person.get("linkedin_url"),
+        "twitter_url": twitter,
         "phone": _first_phone(person.get("phone_numbers")),
+        "location": location_str,
+        "skills": [],
+        "interests": [],
         "organization": {
             "name": organization.get("name"),
             "domain": organization.get("primary_domain") or organization.get("website_url"),
             "website_url": organization.get("website_url"),
             "linkedin_url": organization.get("linkedin_url"),
             "employee_count": organization.get("estimated_num_employees"),
+            "employee_range": None,
+            "founded_year": co_founded,
             "industry": organization.get("industry") or organization.get("industry_tag") or organization.get("keywords"),
             "keywords": organization.get("keywords") or [],
             "technologies": technology_names,

@@ -43,6 +43,18 @@ def _apply_identity_profile(company, contact, identity_profile: dict) -> None:
             contact.phone = identity_profile["phone"]
         if identity_profile.get("linkedin_url") and not contact.linkedin_url:
             contact.linkedin_url = identity_profile["linkedin_url"]
+        if identity_profile.get("twitter_url") and not contact.twitter_url:
+            contact.twitter_url = identity_profile["twitter_url"]
+        if identity_profile.get("seniority") and not contact.seniority:
+            contact.seniority = str(identity_profile["seniority"])
+        if identity_profile.get("location") and not contact.location:
+            contact.location = str(identity_profile["location"])
+        new_skills = identity_profile.get("skills") or []
+        if new_skills and not contact.skills:
+            contact.skills = new_skills
+        new_interests = identity_profile.get("interests") or []
+        if new_interests and not contact.interests:
+            contact.interests = new_interests
 
     if company:
         domain = organization.get("domain") or organization.get("website_url")
@@ -55,6 +67,13 @@ def _apply_identity_profile(company, contact, identity_profile: dict) -> None:
         if organization.get("employee_count") and not company.employee_count:
             try:
                 company.employee_count = int(organization["employee_count"])
+            except (TypeError, ValueError):
+                pass
+        if organization.get("employee_range") and not company.employee_range:
+            company.employee_range = str(organization["employee_range"])
+        if organization.get("founded_year") and not company.founded_year:
+            try:
+                company.founded_year = int(organization["founded_year"])
             except (TypeError, ValueError):
                 pass
         industry = organization.get("industry")

@@ -55,9 +55,13 @@ class CompanyResponse(BaseModel):
     domain: str | None
     industry: str | None
     employee_count: int | None
+    employee_range: str | None = None
+    founded_year: int | None = None
     revenue_range: str | None
     location: str | None
     description: str | None
+    linkedin_url: str | None = None
+    website_url: str | None = None
     tags: list | None
     created_at: datetime
 
@@ -89,6 +93,13 @@ class ContactResponse(BaseModel):
     email: str
     title: str | None
     department: str | None
+    seniority: str | None = None
+    phone: str | None = None
+    linkedin_url: str | None = None
+    twitter_url: str | None = None
+    location: str | None = None
+    skills: list = []
+    interests: list = []
     tags: list | None
     created_at: datetime
 
