@@ -618,6 +618,62 @@ Use the template playbook below to select the right template and fill in all tok
 
         result = await self.invoke_with_retry(llm, messages)
         try:
-            return parser.parse(result.content)
+            parsed: dict = parser.parse(result.content)
         except Exception:
             return {"raw_response": result.content, "parse_error": True}
+
+        # ── Wrap body content in the LaunchHouse branded HTML template ────────
+        try:
+            from app.tools.email_renderer import HeaderStyle, render_email_html, render_email_plain
+
+            raw_body = parsed.get("body_text") or parsed.get("body_html") or ""
+
+            # Determine sender info from context
+            _sender = sender_info or {}
+            if isinstance(_sender, str):
+                # sender_info was passed as a string repr; use defaults
+                _sender = {}
+            _sender_name = _sender.get("first_name") or _sender.get("name") or "Sneh"
+            _sender_company = _sender.get("company") or "LaunchHouse Events"
+            _sender_role = _sender.get("role") or "Cvent Registration & Event Technology Operations"
+            _sender_site = _sender.get("site_url") or _sender.get("company_site_url") or "https://launchhouse.events/"
+            _sender_cal = _sender.get("calendar_link") or _sender.get("sender_calendar_link") or ""
+
+            # Use compact signature for senior contacts (Director+)
+            _lead = lead_data or {}
+            if isinstance(_lead, str):
+                _lead_lower = _lead.lower()
+                _compact = any(t in _lead_lower for t in ("director", "vp ", "vice president", "head of", "chief", " coo", " cmo", " cto", " ceo"))
+            else:
+                _title = str(_lead.get("title", "") or _lead.get("job_title", "")).lower()
+                _compact = any(t in _title for t in ("director", "vp ", "vice president", "head of", "chief", "coo", "cmo", "cto", "ceo"))
+
+            # Choose header: premium for follow-ups / replies, slim for cold outreach
+            _step = step_config.get("step", 1) if step_config else 1
+            _header = HeaderStyle.PREMIUM if _step > 2 else HeaderStyle.SLIM
+
+            branded_html = render_email_html(
+                body_text=raw_body,
+                sender_name=_sender_name,
+                sender_company=_sender_company,
+                sender_role=_sender_role,
+                sender_site_url=_sender_site,
+                sender_calendar_link=_sender_cal,
+                header_style=_header,
+                compact_signature=_compact,
+            )
+            plain_text = render_email_plain(
+                body_text=raw_body,
+                sender_name=_sender_name,
+                sender_site_url=_sender_site,
+                sender_calendar_link=_sender_cal,
+            )
+            parsed["body_html"] = branded_html
+            parsed["body_text"] = plain_text
+        except Exception as render_err:
+            import logging as _log
+            _log.getLogger(__name__).warning(
+                "email_renderer failed, using raw LLM body: %s", render_err
+            )
+
+        return parsed
