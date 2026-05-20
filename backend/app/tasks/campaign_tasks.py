@@ -250,7 +250,7 @@ async def _process_campaign_lead_async(campaign_lead_id: str):
         if current_step == 0 and contact and contact.email:
             from app.agents.v3.cache import AgentResultCache
             from app.agents.v3.contracts import CacheScope, SignalType
-            _arc = AgentResultCache(session_factory=_make_session_factory)
+            _arc = AgentResultCache(session_factory=_make_session_factory())
             _outreach_r = await _arc.get(SignalType.OUTREACH, CacheScope.CONTACT, contact.email)
             if _outreach_r and _outreach_r.is_usable():
                 _pl = _outreach_r.payload or {}
