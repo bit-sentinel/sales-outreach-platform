@@ -215,7 +215,9 @@ def _signature_block(
     company_h = html.escape(sender_company)
     role_h = html.escape(sender_role)
     site_url = sender_site_url or "#"
-    cal_url = sender_calendar_link or DEFAULT_CALENDAR_LINK
+    cal_url = (sender_calendar_link
+               if sender_calendar_link and sender_calendar_link not in ("", "#")
+               else DEFAULT_CALENDAR_LINK)
 
     # Display-friendly versions
     site_display = re.sub(r"^https?://", "", site_url).rstrip("/")
@@ -261,20 +263,20 @@ def _footer_block(site_url: str) -> str:
     return f"""
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
-        <td style="background:{BLUE};border-top:1px solid {LINE_BORDER};
-                   padding:18px 24px 16px;">
-          <table cellpadding="0" cellspacing="0" border="0">
+        <td style="background:{LIGHT_BLUE_BG};border-top:1px solid {LINE_BORDER};
+                   padding:20px 32px 18px;">
+          <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:10px;">
             <tr>
-              <td style="vertical-align:middle;padding-right:10px;width:36px;">
+              <td style="vertical-align:middle;padding-right:10px;width:32px;">
                 <img src="{LOGO_URL}" width="28" height="28" alt="LH"
                      style="display:block;border:0;border-radius:5px;" />
               </td>
               <td style="vertical-align:middle;">
-                <span style="display:block;color:{WHITE};font-size:13px;font-weight:700;
+                <span style="display:block;color:{DARK_NAVY};font-size:13px;font-weight:700;
                              font-family:Arial,Helvetica,sans-serif;line-height:1.2;">
                   Launch House
                 </span>
-                <span style="display:block;color:{LIGHT_BLUE_BG};font-size:8px;font-weight:600;
+                <span style="display:block;color:{MUTED_TEXT};font-size:8px;font-weight:600;
                              font-family:Arial,Helvetica,sans-serif;letter-spacing:2px;
                              text-transform:uppercase;">
                   EVENTS
@@ -282,11 +284,6 @@ def _footer_block(site_url: str) -> str:
               </td>
             </tr>
           </table>
-        </td>
-      </tr>
-      <tr>
-        <td style="background:{LIGHT_BLUE_BG};border-top:1px solid {LINE_BORDER};
-                   padding:18px 40px 16px;">
           <div style="font-size:13px;line-height:20px;color:{DEFAULT_TEXT};
                       font-family:Arial,Helvetica,sans-serif;margin-bottom:10px;">
             {FOOTER_DESC}
@@ -437,7 +434,9 @@ def render_email_plain(
     # Strip LLM-appended signature
     clean = _strip_llm_signature(clean)
 
-    cal_url = sender_calendar_link or DEFAULT_CALENDAR_LINK
+    cal_url = (sender_calendar_link
+               if sender_calendar_link and sender_calendar_link not in ("", "#")
+               else DEFAULT_CALENDAR_LINK)
     cal_display = (
         "Book a meeting: " + cal_url
         if "calendar.google.com" in cal_url or len(cal_url) > 60
