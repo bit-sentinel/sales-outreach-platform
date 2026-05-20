@@ -256,19 +256,39 @@ def _signature_block(
 
 
 def _footer_block(site_url: str) -> str:
-    site_url = site_url or "#"
+    site_url = site_url or "https://launchhouse.events/"
     site_display = re.sub(r"^https?://", "", site_url).rstrip("/")
     return f"""
     <table width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr>
+        <td style="background:{BLUE};border-top:1px solid {LINE_BORDER};
+                   padding:18px 24px 16px;">
+          <table cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="vertical-align:middle;padding-right:10px;width:36px;">
+                <img src="{LOGO_URL}" width="28" height="28" alt="LH"
+                     style="display:block;border:0;border-radius:5px;" />
+              </td>
+              <td style="vertical-align:middle;">
+                <span style="display:block;color:{WHITE};font-size:13px;font-weight:700;
+                             font-family:Arial,Helvetica,sans-serif;line-height:1.2;">
+                  Launch House
+                </span>
+                <span style="display:block;color:{LIGHT_BLUE_BG};font-size:8px;font-weight:600;
+                             font-family:Arial,Helvetica,sans-serif;letter-spacing:2px;
+                             text-transform:uppercase;">
+                  EVENTS
+                </span>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
         <td style="background:{LIGHT_BLUE_BG};border-top:1px solid {LINE_BORDER};
-                   padding:28px 40px 24px;">
-          <div style="font-size:14px;font-weight:600;color:{DARK_NAVY};
-                      font-family:Arial,Helvetica,sans-serif;margin-bottom:6px;">
-            {FOOTER_COMPANY}
-          </div>
+                   padding:18px 40px 16px;">
           <div style="font-size:13px;line-height:20px;color:{DEFAULT_TEXT};
-                      font-family:Arial,Helvetica,sans-serif;margin-bottom:12px;">
+                      font-family:Arial,Helvetica,sans-serif;margin-bottom:10px;">
             {FOOTER_DESC}
           </div>
           <div style="font-size:12px;line-height:18px;color:{MUTED_TEXT};

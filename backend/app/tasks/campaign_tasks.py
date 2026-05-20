@@ -194,12 +194,17 @@ async def _process_campaign_lead_async(campaign_lead_id: str):
             )
             sender = sender_result.scalar_one_or_none()
             if sender:
-                name_parts = (sender.display_name or "").split(" ", 1)
+                _dn = sender.display_name or ""
+                # Extract human first name: "Launch House - SAM" → "Sam"
+                if " - " in _dn:
+                    _human = _dn.split(" - ", 1)[1].strip().title()
+                else:
+                    _human = _dn.split()[0].strip() if _dn else "Team"
                 sender_info = {
-                    "sender_first_name": name_parts[0] if name_parts else sender.display_name,
-                    "sender_last_name": name_parts[1] if len(name_parts) > 1 else "",
+                    "sender_first_name": _human,
+                    "sender_last_name": "",
                     "sender_email": sender.email,
-                    "sender_calendar_link": _settings.sender_calendar_link,
+                    "sender_calendar_link": _settings.sender_calendar_link or "",
                     "company_site_url": _settings.company_site_url,
                 }
 
@@ -238,20 +243,58 @@ async def _process_campaign_lead_async(campaign_lead_id: str):
         if latest_reply:
             reply_intent = latest_reply.intent
 
-        # Generate personalized email via AI using the full template playbook
-        from app.agents.personalization_agent import PersonalizationAgent
-        agent = PersonalizationAgent()
-        email_content = await agent.run(
-            lead_id=str(cl.lead_id),
-            tenant_id=str(cl.tenant_id),
-            step_config=step,
-            lead_data=str(lead_data) if lead_data else None,
-            research_data=research_data,
-            sender_info=str(sender_info) if sender_info else None,
-            previous_email_subject=previous_email_subject,
-            previous_email_body=previous_email_body,
-            reply_intent=reply_intent,
-        )
+        # For step 0: check if the lead has v3 outreach intelligence (Outreach tab).
+        # If so, use that pre-generated subject + body directly — it's already optimised
+        # for this specific lead. Fall back to PersonalizationAgent if not available.
+        email_content = None
+        if current_step == 0 and contact and contact.email:
+            from app.agents.v3.cache import AgentResultCache
+            from app.agents.v3.contracts import CacheScope, SignalType
+            _arc = AgentResultCache(session_factory=_make_session_factory)
+            _outreach_r = await _arc.get(SignalType.OUTREACH, CacheScope.CONTACT, contact.email)
+            if _outreach_r and _outreach_r.is_usable():
+                _pl = _outreach_r.payload or {}
+                _subj = _pl.get("subject_line", "").strip()
+                _body = _pl.get("email_body", "").strip()
+                if _subj and _body:
+                    from app.tools.email_renderer import render_email_html, render_email_plain
+                    _html = render_email_html(
+                        body_text=_body,
+                        sender_name=sender_info.get("sender_first_name", ""),
+                        sender_company="LaunchHouse Events",
+                        sender_site_url=sender_info.get("company_site_url", "https://launchhouse.events/"),
+                        sender_calendar_link=sender_info.get("sender_calendar_link") or "",
+                    )
+                    _plain = render_email_plain(
+                        body_text=_body,
+                        sender_name=sender_info.get("sender_first_name", ""),
+                        sender_site_url=sender_info.get("company_site_url", "https://launchhouse.events/"),
+                        sender_calendar_link=sender_info.get("sender_calendar_link") or "",
+                    )
+                    email_content = {
+                        "subject": _subj,
+                        "body_html": _html,
+                        "body_text": _plain,
+                        "personalization_hooks": ["source: v3_outreach_intelligence"],
+                        "template_used": "v3 outreach intelligence",
+                        "tone": "professional",
+                    }
+
+        if email_content is None:
+            # Generate personalized email via AI using the full template playbook
+            from app.agents.personalization_agent import PersonalizationAgent
+            agent = PersonalizationAgent()
+            email_content = await agent.run(
+                lead_id=str(cl.lead_id),
+                tenant_id=str(cl.tenant_id),
+                step_config=step,
+                lead_data=str(lead_data) if lead_data else None,
+                research_data=research_data,
+                sender_info=str(sender_info) if sender_info else None,
+                previous_email_subject=previous_email_subject,
+                previous_email_body=previous_email_body,
+                reply_intent=reply_intent,
+            )
 
         # ── Test mode: round-robin email override ─────────────────────────────
         # Use the snapshot captured at launch time — immune to mid-campaign toggles.

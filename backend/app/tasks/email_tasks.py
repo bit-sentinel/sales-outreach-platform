@@ -98,7 +98,7 @@ async def _send_email_async(message_id: str):
                 sender = sender_result.scalar_one_or_none()
                 if sender:
                     from_email = sender.email
-                    from_name = sender.display_name
+                    from_name = settings.email_default_from_name or "LaunchHouse Events"
 
             # ── Send via SendGrid ───────────────────────────────────────────────
             external_id: str | None = None

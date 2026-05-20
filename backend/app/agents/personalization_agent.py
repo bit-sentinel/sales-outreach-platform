@@ -34,10 +34,9 @@ TEMPLATES = """
 ABOUT LAUNCH HOUSE EVENTS:
 Cvent implementation specialists and event management outsourcing. Build inside Cvent for event and marketing teams — registration, Flex, Attendee Hub, speaker portals, rush variants. Fixed-fee per build. Run as overflow alongside in-house teams, not in place of them. Sender signs as a human BDR (use sender_first_name/sender_last_name).
 
-SENDER SIGNATURE FORMAT (always end emails with):
+SENDER SIGNATURE FORMAT (always end emails with — nothing else after this):
+Best,
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 ──────────────────────────────────────────────────────────────
 TEMPLATE SELECTION HIERARCHY (follow strictly, top = highest priority):
@@ -70,8 +69,6 @@ Not pitching a platform. Just an extra set of hands for the weeks your team runs
 Useful to send two recent build examples at your cadence?
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Short (Director+):
 Hi {{first_name}},
@@ -83,8 +80,6 @@ We build inside Cvent — sites, forms, Flex, Attendee Hub — as overflow for t
 Want two examples at your cadence?
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Tokens: {{first_name}}, {{company_name}}, {{event_cadence_observation}} (short specific phrase e.g. "a monthly customer event series")
 Rules: Use only if event cadence is verifiable. Suppress if event in next 120 days found (use T5/7/8 instead). Full version for Specialist/Coordinator. Short version for Director+.
@@ -104,8 +99,6 @@ No pitch. If it's useful, worth a 15-minute conversation. If not, no follow-up a
 Want it, or shall I close this out?
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Short:
 Hi {{first_name}},
@@ -115,8 +108,6 @@ One thing that might be useful: {{value_add_piece}}.
 Relevant because {{value_add_relevance}}. Worth a look?
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Tokens: {{first_name}}, {{company_name}}, {{value_add_piece}} (specific resource e.g. "a post-event data checklist for Cvent"), {{value_add_relevance}} (why it fits them)
 Rules: Always references T1 briefly. Offers something concrete. Ends with binary yes/no.
@@ -132,8 +123,6 @@ Happy to close this thread if build support isn't on the radar.
 If there's a version that could be useful — an event in 60 days, a Hub rebuild, or just overflow hands — one line tells me whether to stay in touch or move on.
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Short:
 Hi {{first_name}},
@@ -141,8 +130,6 @@ Hi {{first_name}},
 Worth staying in touch, or close this out? Either reply works.
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Rules: Do NOT re-pitch. Suppress if prospect opened previous email 3+ times. Cap at 50 words.
 
@@ -159,8 +146,6 @@ If timing changes later — a new event on the calendar, a Cvent build you'd rat
 Wishing your next event a clean load-in.
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Short:
 Hi {{first_name}},
@@ -170,8 +155,6 @@ I'll stop here. If timing changes — a build, a rescue, an overflow week — co
 Good luck with the next one.
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Rules: Never say "final email" or "goodbye" in subject. Swap "clean load-in" → "successful launch" for marketing leadership titles. Move lead to nurture after this.
 
@@ -192,8 +175,6 @@ Even if the core build is done, rush work and last-mile fixes are where we usual
 Useful to share two examples from similar events?
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Short:
 Hi {{first_name}},
@@ -205,8 +186,6 @@ We build inside Cvent for event teams. Registration, Flex, Hub, rush fixes. If a
 Two examples from similar events?
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Tokens: {{first_name}}, {{event_name}} (exact public-facing name, never abbreviated), {{event_date_phrase}} (e.g. "late June", "the week of Sept 9", "mid-Q4")
 Rules: Use ONLY if event is verifiable on public site/press. If 0-30 days out → use T7 instead. If 31-120 days → use T8 instead. Never write "I noticed" without confirmed evidence.
@@ -226,8 +205,6 @@ No meeting ask. If it's useful, I can send a one-pager on how we engage and what
 Want it?
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Short:
 Hi {{first_name}},
@@ -239,8 +216,6 @@ We're Cvent developers — overflow hands for event teams. Simple to Complex bui
 One-pager on how we engage?
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Tokens: {{first_name}}, {{company_name}}, {{company_vertical_or_motion}} (e.g. "enterprise SaaS", "financial services field marketing"), {{company_vertical_short}} (1-2 word for subject, e.g. "SaaS", "FinServ")
 Rules: Use when event activity is inferable but no specific event confirmed. Vague is safer than wrong.
@@ -258,8 +233,6 @@ We hold rush capacity for exactly this stretch. Form logic fixes, Flex page edit
 If anything's still on the list, one-line reply and I'll confirm feasibility within the hour. No meeting needed to scope small work.
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Short:
 Hi {{first_name}},
@@ -269,8 +242,6 @@ Hi {{first_name}},
 One line and I'll confirm in the hour.
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Tokens: {{first_name}}, {{event_name}}, {{days_out}} (integer 1-30)
 Rules: Only if rush capacity genuinely available. Do NOT pitch new builds. Inside 7 days → smallest possible ask only.
@@ -288,8 +259,6 @@ If any of it is likely to compete with everything else your team owns, we'll tak
 Two ways forward: a 15-minute scoping call, or send over what you have and we'll come back with a fit read and proposal outline. Whichever's faster for you.
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Short:
 Hi {{first_name}},
@@ -299,8 +268,6 @@ Hi {{first_name}},
 15 min, or send what you have first?
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Tokens: {{first_name}}, {{event_name}}, {{event_date_phrase}}
 Rules: Default for 31-120 day window. "Send what you have" CTA outperforms meeting asks for Director level.
@@ -318,8 +285,6 @@ News like that usually expands the event calendar before it eases anything: {{ne
 Not asking for a meeting off the back of a press release. But if it's useful to have a partner pre-wired for when the calendar expands, I can send a one-pager.
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Short:
 Hi {{first_name}},
@@ -329,8 +294,6 @@ Congrats on {{news_headline_short}} — usually means more events on the calenda
 We're Cvent developers running as overflow. Want a one-pager for when the build load spikes?
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Tokens: {{first_name}}, {{news_short_phrase}} (2-4 words for subject e.g. "the Series C"), {{news_headline_short}} (sentence-ready e.g. "your Series C"), {{news_event_implication}} (one line connecting news to events)
 Rules: News must be public, recent (≤45 days), credibly tied to event motion. Congratulations must name the specific news. Leadership change → welcome note framing, drop congrats.
@@ -345,15 +308,13 @@ Hi {{first_name}},
 
 Glad it landed. Two ways forward:
 
-1) 20-minute intro this week — {{sender_calendar_link}} has open slots, or send a window that works.
+1) 20-minute intro this week — send a window that works and I'll confirm.
 
 2) If you'd rather scope offline, send what you have — an event brief, a Cvent spec, a list of what's on the build roadmap — and I'll come back with a fit read and proposal outline.
 
 Either works.
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 Rules: Respond within 4 hours. Do not re-pitch. Acknowledge specific service if they named one.
 
 ──────────────────────────────────────────────────────────────
@@ -369,8 +330,6 @@ Two notes: Fixed-fee per build, scoped before work starts. We sit alongside in-h
 After you've had a look, worth 15 minutes to pressure-test fit against your actual build pipeline?
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 ──────────────────────────────────────────────────────────────
 TEMPLATE 12 — "Not Now" Reply
@@ -385,8 +344,6 @@ I'll circle back {{revisit_window}}. If anything shifts before — a new event a
 Thanks for the reply.
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 Tokens: {{revisit_window}} (e.g. "in 60 days", "after your next event", "in Q3". Default: 60 days)
 Rules: Do NOT try to convert "not now" into "now." Log revisit window and actually return at that time.
@@ -406,8 +363,6 @@ Nothing to switch, no retainer. Worth keeping us as a pressure valve for those m
 If yes, I'll send a one-pager you can file for when you need it.
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 Rules: Never disparage existing team/agency. "Pressure valve" framing. If they accept → long nurture, not active sequence.
 
 ──────────────────────────────────────────────────────────────
@@ -427,8 +382,6 @@ Two easy options:
 Either works. Thanks for the redirect.
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 
 === SCENARIO TEMPLATES ===
 
@@ -445,8 +398,6 @@ Short context: we're Cvent developers running full-time as overflow for event an
 Worth 15 minutes? If not, one-line reply and I'll close the thread.
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 Rules: Send ONLY if voicemail was actually left. Within 30 minutes.
 
 ──────────────────────────────────────────────────────────────
@@ -467,8 +418,6 @@ If anything specific would help us prep — a current build, a stalled project, 
 Talk {{meeting_day_short}}.
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 Rules: Send immediately after booking. Three-item agenda is required (anti-no-show). 24-hour reminder if meeting is 5+ business days out.
 
 ──────────────────────────────────────────────────────────────
@@ -495,8 +444,6 @@ Next steps:
 Anything off or missing? Easier to fix now than later.
 
 {{sender_first_name}}
-{{company_site_url}}
-{{sender_calendar_link}}
 Rules: Send within 2 hours of call. Use prospect's own language. Name their next step explicitly.
 
 === DO NOT USE THESE SIGNALS FOR PERSONALIZATION ===
@@ -542,7 +489,7 @@ CRITICAL RULES:
 4. The email must read as written by a human BDR, not generated by an AI.
 5. Subject line must come from the template's listed options, adapted to the specific lead.
 6. No exclamation marks. No wellness openers. No generic phrases.
-7. Resolve {{sender_first_name}} using the provided sender info. Resolve {{sender_calendar_link}} if provided, otherwise omit it. Resolve {{company_site_url}} using the provided sender info (e.g. "https://launchhouse.events/").
+7. Resolve {{sender_first_name}} using the provided sender info. Do NOT include URLs, calendar links, or website addresses in the email body — those are added separately.
 8. The body_text field must be the plain-text version. The body_html field wraps it in simple <p> tags.
 """
 
