@@ -183,13 +183,16 @@ class CampaignService:
             )
 
         campaign.status = target
-        if target == "active" and not campaign.launched_at:
+        is_first_launch = target == "active" and not campaign.launched_at
+        if is_first_launch:
             campaign.launched_at = datetime.now(timezone.utc)
 
+        await self.db.flush()
+
+        if is_first_launch:
             from app.tasks.campaign_tasks import execute_campaign
             execute_campaign.delay(str(campaign.id))
 
-        await self.db.flush()
         return campaign
 
     async def add_leads(self, campaign_id: uuid.UUID, lead_ids: list[uuid.UUID]) -> int:
