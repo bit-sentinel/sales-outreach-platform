@@ -194,14 +194,8 @@ async def _process_campaign_lead_async(campaign_lead_id: str):
             )
             sender = sender_result.scalar_one_or_none()
             if sender:
-                _dn = sender.display_name or ""
-                # Extract human first name: "Launch House - SAM" → "Sam"
-                if " - " in _dn:
-                    _human = _dn.split(" - ", 1)[1].strip().title()
-                else:
-                    _human = _dn.split()[0].strip() if _dn else "Team"
                 sender_info = {
-                    "sender_first_name": _human,
+                    "sender_first_name": _settings.sender_first_name,
                     "sender_last_name": "",
                     "sender_email": sender.email,
                     "sender_calendar_link": _settings.sender_calendar_link or "",
