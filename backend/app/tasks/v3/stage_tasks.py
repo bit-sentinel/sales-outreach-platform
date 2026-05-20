@@ -248,6 +248,10 @@ async def _writeback_identity(lead_id: UUID, payload: dict) -> None:
             select(Company).where(Company.id == lead.company_id))).scalar_one_or_none()
 
         if contact:
+            if payload.get("title") and not contact.title:
+                contact.title = str(payload["title"])
+            if payload.get("department") and not contact.department:
+                contact.department = str(payload["department"])
             if payload.get("seniority") and not contact.seniority:
                 contact.seniority = str(payload["seniority"])
             if payload.get("twitter_url") and not contact.twitter_url:

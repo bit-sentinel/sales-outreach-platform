@@ -34,6 +34,12 @@ BRAND_TAGLINE = "CVENT REGISTRATION &amp; EVENT TECHNOLOGY OPERATIONS"
 FOOTER_COMPANY = "LaunchHouse Events"
 FOOTER_DESC = "Premium Cvent registration operations support — built around your existing event team&#39;s workflow."
 
+DEFAULT_CALENDAR_LINK = (
+    "https://calendar.google.com/calendar/embed"
+    "?src=c_95689573c53b45b15f763deb90590f9d46812cfd53b8177bd92aad0d7a5b157a"
+    "%40group.calendar.google.com&ctz=Asia%2FKolkata"
+)
+
 
 class HeaderStyle(str, Enum):
     SLIM = "slim"
@@ -41,6 +47,25 @@ class HeaderStyle(str, Enum):
 
 
 # ── Internal helpers ───────────────────────────────────────────────────────────
+
+def _strip_llm_signature(body_text: str) -> str:
+    """
+    Remove the trailing signature block that the LLM appends to the email body.
+    Looks for the last occurrence of a sign-off ("Best,", "Best regards,", etc.)
+    in the last 60% of the text and strips from there onwards.
+    """
+    pattern = re.compile(
+        r"\n+\s*Best[,.]?\s*(?:regards[,.]?)?\s*\n",
+        re.IGNORECASE,
+    )
+    matches = list(pattern.finditer(body_text))
+    if matches:
+        last = matches[-1]
+        # Only strip if it appears after the first 40% of the body
+        if last.start() > len(body_text) * 0.4:
+            return body_text[: last.start()].rstrip()
+    return body_text
+
 
 def _paragraphs_to_html(body_text: str) -> str:
     """
@@ -101,6 +126,9 @@ def _paragraphs_to_html(body_text: str) -> str:
     return "\n".join(out_parts)
 
 
+LOGO_URL = "https://launchhouse.events/favicon.svg"
+
+
 def _slim_header() -> str:
     return f"""
     <!--[if mso]>
@@ -111,10 +139,21 @@ def _slim_header() -> str:
     <table width="100%" cellpadding="0" cellspacing="0" border="0"
            style="background:{BLUE};height:60px;">
       <tr>
-        <td style="padding:0 24px;vertical-align:middle;">
-          <span style="color:{WHITE};font-size:18px;font-weight:600;
-                       font-family:Arial,Helvetica,sans-serif;letter-spacing:0;">
-            {BRAND_NAME}
+        <td style="padding:0 0 0 24px;vertical-align:middle;width:1%;white-space:nowrap;">
+          <img src="{LOGO_URL}" width="36" height="36" alt="LV"
+               style="display:inline-block;vertical-align:middle;border:0;
+                      border-radius:7px;" />
+        </td>
+        <td style="padding:0 0 0 10px;vertical-align:middle;white-space:nowrap;">
+          <span style="display:block;color:{WHITE};font-size:15px;font-weight:700;
+                       font-family:Arial,Helvetica,sans-serif;line-height:1.15;
+                       letter-spacing:-0.2px;">
+            Launch House
+          </span>
+          <span style="display:block;color:{LIGHT_BLUE_BG};font-size:9px;font-weight:600;
+                       font-family:Arial,Helvetica,sans-serif;letter-spacing:2px;
+                       text-transform:uppercase;line-height:1.3;">
+            EVENTS
           </span>
         </td>
         <td style="padding:0 24px;vertical-align:middle;text-align:right;">
@@ -176,32 +215,40 @@ def _signature_block(
     company_h = html.escape(sender_company)
     role_h = html.escape(sender_role)
     site_url = sender_site_url or "#"
-    cal_url = sender_calendar_link or "#"
+    cal_url = sender_calendar_link or DEFAULT_CALENDAR_LINK
 
     # Display-friendly versions
     site_display = re.sub(r"^https?://", "", site_url).rstrip("/")
-    cal_display = re.sub(r"^https?://", "", cal_url)
+    # Show friendly label for long calendar URLs
+    cal_display = (
+        "Book a meeting →"
+        if "calendar.google.com" in cal_url or len(cal_url) > 60
+        else re.sub(r"^https?://", "", cal_url)
+    )
 
     link_style = f"color:{BLUE};text-decoration:underline;font-weight:500;font-family:Arial,Helvetica,sans-serif;font-size:14px;"
     base_style = f"font-family:Arial,Helvetica,sans-serif;line-height:22px;"
+    best_line = f'<div style="font-size:14px;color:{DEFAULT_TEXT};margin-bottom:6px;">Best,</div>'
 
     if compact:
         return f"""
-    <div style="margin-top:24px;{base_style}">
-      <div style="font-size:15px;font-weight:600;color:{DEFAULT_TEXT};">{name_h}</div>
-      <div style="font-size:13px;color:{MUTED_TEXT};">{role_h} · {company_h}</div>
-      <div><a href="{site_url}" style="{link_style}">{site_display}</a></div>
+    <div style="margin-top:28px;{base_style}">
+      {best_line}
+      <div style="font-size:15px;font-weight:600;color:{DEFAULT_TEXT};margin-top:4px;">{name_h}</div>
+      <div style="font-size:14px;font-weight:500;color:{DEFAULT_TEXT};">{company_h}</div>
+      <div style="font-size:13px;color:{MUTED_TEXT};">{role_h}</div>
     </div>"""
 
     calendar_line = (
         f'      <div><a href="{cal_url}" style="{link_style}">{cal_display}</a></div>\n'
-        if cal_url and cal_url != "#"
+        if cal_url
         else ""
     )
 
     return f"""
     <div style="margin-top:28px;{base_style}">
-      <div style="font-size:15px;font-weight:600;color:{DEFAULT_TEXT};">{name_h}</div>
+      {best_line}
+      <div style="font-size:15px;font-weight:600;color:{DEFAULT_TEXT};margin-top:4px;">{name_h}</div>
       <div style="font-size:14px;font-weight:500;color:{DEFAULT_TEXT};">{company_h}</div>
       <div style="font-size:13px;color:{MUTED_TEXT};">{role_h}</div>
 {calendar_line}      <div><a href="{site_url}" style="{link_style}">{site_display}</a></div>
@@ -247,7 +294,7 @@ def render_email_html(
     sender_company: str = "LaunchHouse Events",
     sender_role: str = "Cvent Registration & Event Technology Operations",
     sender_site_url: str = "https://launchhouse.events/",
-    sender_calendar_link: str = "",
+    sender_calendar_link: str = DEFAULT_CALENDAR_LINK,
     header_style: HeaderStyle | str = HeaderStyle.SLIM,
     compact_signature: bool = False,
 ) -> str:
@@ -271,7 +318,7 @@ def render_email_html(
     style = HeaderStyle(header_style)
 
     header_html = _slim_header() if style == HeaderStyle.SLIM else _premium_header()
-    body_html = _paragraphs_to_html(body_text)
+    body_html = _paragraphs_to_html(_strip_llm_signature(body_text))
     sig_html = _signature_block(
         sender_name=sender_name,
         sender_company=sender_company,
@@ -357,7 +404,7 @@ def render_email_plain(
     body_text: str,
     sender_name: str = "LaunchHouse Team",
     sender_site_url: str = "https://launchhouse.events/",
-    sender_calendar_link: str = "",
+    sender_calendar_link: str = DEFAULT_CALENDAR_LINK,
 ) -> str:
     """
     Return a clean plain-text version of the email (for multipart/alternative).
@@ -367,20 +414,32 @@ def render_email_plain(
     clean = re.sub(r"<[^>]+>", "", body_text)
     # Collapse excess blank lines
     clean = re.sub(r"\n{3,}", "\n\n", clean).strip()
+    # Strip LLM-appended signature
+    clean = _strip_llm_signature(clean)
 
-    sig_lines = [sender_name]
-    if sender_site_url and sender_site_url != "#":
-        sig_lines.append(re.sub(r"^https?://", "", sender_site_url).rstrip("/"))
-    if sender_calendar_link and sender_calendar_link != "#":
-        sig_lines.append(re.sub(r"^https?://", "", sender_calendar_link))
+    cal_url = sender_calendar_link or DEFAULT_CALENDAR_LINK
+    cal_display = (
+        "Book a meeting: " + cal_url
+        if "calendar.google.com" in cal_url or len(cal_url) > 60
+        else re.sub(r"^https?://", "", cal_url)
+    )
 
+    sig_lines = [
+        "Best,",
+        "",
+        sender_name,
+        "LaunchHouse Events",
+        "Cvent Registration & Event Technology Operations",
+        cal_display,
+        re.sub(r"^https?://", "", sender_site_url).rstrip("/"),
+    ]
     sig = "\n".join(sig_lines)
 
     return f"""{clean}
 
---
 {sig}
 
+--
 LaunchHouse Events — {re.sub(r"^https?://", "", sender_site_url).rstrip("/")}
 If this is not relevant, reply "not now" and we won't follow up.
 """
