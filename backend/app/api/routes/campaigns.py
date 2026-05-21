@@ -302,7 +302,9 @@ async def update_campaign_message(
         try:
             from app.tools.email_renderer import render_email_html, render_email_plain
             from app.models.campaign import SenderAccount
-            sender_name = "LaunchHouse Team"
+            from app.config import get_settings
+            _settings = get_settings()
+            sender_name = "Sameera Gurung"
             sender_company = "LaunchHouse Events"
             sender_role = "Cvent Registration & Event Technology Operations"
             sender_site_url = "https://launchhouse.events/"
@@ -312,9 +314,8 @@ async def update_campaign_message(
                     select(SenderAccount).where(SenderAccount.id == message.sender_account_id)
                 )
                 sa = sa_res.scalar_one_or_none()
-                if sa:
-                    sender_name = sa.display_name or sender_name
-                    sender_company = "LaunchHouse Events"
+                if sa and _settings.sender_calendar_link:
+                    sender_calendar_link = _settings.sender_calendar_link
             message.body_html = render_email_html(
                 body_text=body["body_text"],
                 sender_name=sender_name,

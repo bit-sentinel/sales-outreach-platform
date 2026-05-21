@@ -254,14 +254,14 @@ async def _process_campaign_lead_async(campaign_lead_id: str):
                     from app.tools.email_renderer import render_email_html, render_email_plain
                     _html = render_email_html(
                         body_text=_body,
-                        sender_name=sender_info.get("sender_first_name", ""),
+                        sender_name="Sameera Gurung",
                         sender_company="LaunchHouse Events",
                         sender_site_url=sender_info.get("company_site_url", "https://launchhouse.events/"),
                         sender_calendar_link=sender_info.get("sender_calendar_link") or "",
                     )
                     _plain = render_email_plain(
                         body_text=_body,
-                        sender_name=sender_info.get("sender_first_name", ""),
+                        sender_name="Sameera Gurung",
                         sender_site_url=sender_info.get("company_site_url", "https://launchhouse.events/"),
                         sender_calendar_link=sender_info.get("sender_calendar_link") or "",
                     )
