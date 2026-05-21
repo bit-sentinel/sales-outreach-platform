@@ -34,11 +34,7 @@ BRAND_TAGLINE = "CVENT REGISTRATION &amp; EVENT TECHNOLOGY OPERATIONS"
 FOOTER_COMPANY = "LaunchHouse Events"
 FOOTER_DESC = "Premium Cvent registration operations support — built around your existing event team&#39;s workflow."
 
-DEFAULT_CALENDAR_LINK = (
-    "https://calendar.google.com/calendar/embed"
-    "?src=c_95689573c53b45b15f763deb90590f9d46812cfd53b8177bd92aad0d7a5b157a"
-    "%40group.calendar.google.com&ctz=Asia%2FKolkata"
-)
+DEFAULT_CALENDAR_LINK = "https://calendar.app.google/Aycv6qmqjNk4qJpJ7"
 
 
 class HeaderStyle(str, Enum):
