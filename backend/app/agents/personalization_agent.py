@@ -580,7 +580,7 @@ Use the template playbook below to select the right template and fill in all tok
             if isinstance(_sender, str):
                 # sender_info was passed as a string repr; use defaults
                 _sender = {}
-            _sender_name = _sender.get("first_name") or _sender.get("name") or "Sneh"
+            _sender_name = _sender.get("first_name") or _sender.get("name") or "Sameera Gurung"
             _sender_company = _sender.get("company") or "LaunchHouse Events"
             _sender_role = _sender.get("role") or "Cvent Registration & Event Technology Operations"
             _sender_site = _sender.get("site_url") or _sender.get("company_site_url") or "https://launchhouse.events/"

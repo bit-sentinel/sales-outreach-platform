@@ -99,14 +99,18 @@ def _paragraphs_to_html(body_text: str) -> str:
         # Detect bullet block: 3+ lines where most start with —, -, *, or digits
         bullet_lines = [l for l in lines if re.match(r"^\s*(—|-|\*|\d+[\.\)])\s+", l)]
         if len(bullet_lines) >= 2 and len(bullet_lines) >= len(lines) - 1:
-            items = "".join(
-                f'<li style="font-size:16px;line-height:26px;color:{DEFAULT_TEXT};'
-                f'padding:0 0 4px 0;list-style:none;padding-left:18px;position:relative;">'
-                f'<span style="position:absolute;left:0;color:{DEFAULT_TEXT};">—</span>'
-                f'{_linkify(html.escape(re.sub(r"^\s*(—|-|\*|\d+[\.\)])\s+", "", l.strip())))}</li>'
-                for l in lines
-                if l.strip()
-            )
+            _bullet_re = re.compile(r"^\s*(—|-|\*|\d+[\.\)])\s+")
+
+            def _bullet_item(line: str) -> str:
+                text = _linkify(html.escape(_bullet_re.sub("", line.strip())))
+                return (
+                    f'<li style="font-size:16px;line-height:26px;color:{DEFAULT_TEXT};'
+                    f'padding:0 0 4px 0;list-style:none;padding-left:18px;position:relative;">'
+                    f'<span style="position:absolute;left:0;color:{DEFAULT_TEXT};">—</span>'
+                    f'{text}</li>'
+                )
+
+            items = "".join(_bullet_item(l) for l in lines if l.strip())
             out_parts.append(
                 f'<ul style="margin:0 0 20px;padding:0;list-style:none;">{items}</ul>'
             )
@@ -216,7 +220,7 @@ def _signature_block(
                else DEFAULT_CALENDAR_LINK)
 
     # Display-friendly versions
-    site_display = re.sub(r"^https?://", "", site_url).rstrip("/")
+    site_display = site_url.rstrip("/")
     # Show friendly label for long calendar URLs
     cal_display = (
         "Book a meeting →"
@@ -237,11 +241,35 @@ def _signature_block(
       <div style="font-size:13px;color:{MUTED_TEXT};">{role_h}</div>
     </div>"""
 
-    calendar_line = (
-        f'      <div><a href="{cal_url}" style="{link_style}">{cal_display}</a></div>\n'
-        if cal_url
-        else ""
-    )
+    calendar_btn = ""
+    if cal_url:
+        calendar_btn = f"""
+      <div style="margin-top:14px;">
+        <!--[if mso]>
+        <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml"
+                     xmlns:w="urn:schemas-microsoft-com:office:word"
+                     href="{cal_url}"
+                     style="height:30px;v-text-anchor:middle;width:120px;"
+                     arcsize="11%" stroke="f" fillcolor="{BLUE}">
+          <w:anchorlock/>
+          <center style="color:{WHITE};font-family:Arial,Helvetica,sans-serif;
+                         font-size:12px;font-weight:bold;">
+            Book a Meeting
+          </center>
+        </v:roundrect>
+        <![endif]-->
+        <!--[if !mso]><!-->
+        <a href="{cal_url}"
+           style="background-color:{BLUE};border-radius:4px;color:{WHITE};
+                  display:inline-block;font-family:Arial,Helvetica,sans-serif;
+                  font-size:12px;font-weight:600;line-height:30px;
+                  text-align:center;text-decoration:none;
+                  padding:0 14px;white-space:nowrap;
+                  -webkit-text-size-adjust:none;mso-hide:all;">
+          Book a Meeting
+        </a>
+        <!--<![endif]-->
+      </div>"""
 
     return f"""
     <div style="margin-top:28px;{base_style}">
@@ -249,7 +277,8 @@ def _signature_block(
       <div style="font-size:15px;font-weight:600;color:{DEFAULT_TEXT};margin-top:4px;">{name_h}</div>
       <div style="font-size:14px;font-weight:500;color:{DEFAULT_TEXT};">{company_h}</div>
       <div style="font-size:13px;color:{MUTED_TEXT};">{role_h}</div>
-{calendar_line}      <div><a href="{site_url}" style="{link_style}">{site_display}</a></div>
+      <div style="margin-top:4px;"><a href="{site_url}" style="{link_style}">{site_display}</a></div>
+{calendar_btn}
     </div>"""
 
 
