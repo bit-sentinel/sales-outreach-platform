@@ -134,17 +134,17 @@ def _slim_header() -> str:
     <!--[if mso]>
     <table width="640" cellpadding="0" cellspacing="0" border="0" align="center"
            style="background:{BLUE};">
-    <tr><td style="padding:0 24px;height:60px;">
+    <tr><td style="padding:0 24px;">
     <![endif]-->
     <table width="100%" cellpadding="0" cellspacing="0" border="0"
-           style="background:{BLUE};height:60px;">
+           style="background:{BLUE};">
       <tr>
-        <td style="padding:0 0 0 24px;vertical-align:middle;width:1%;white-space:nowrap;">
+        <td style="padding:12px 0 12px 24px;vertical-align:middle;width:1%;white-space:nowrap;">
           <img src="{LOGO_URL}" width="36" height="36" alt="LV"
                style="display:inline-block;vertical-align:middle;border:0;
                       border-radius:7px;" />
         </td>
-        <td style="padding:0 0 0 10px;vertical-align:middle;white-space:nowrap;">
+        <td style="padding:12px 0 12px 10px;vertical-align:middle;white-space:nowrap;">
           <span style="display:block;color:{WHITE};font-size:15px;font-weight:700;
                        font-family:Arial,Helvetica,sans-serif;line-height:1.15;
                        letter-spacing:-0.2px;">
@@ -156,10 +156,16 @@ def _slim_header() -> str:
             EVENTS
           </span>
         </td>
-        <td style="padding:0 24px;vertical-align:middle;text-align:right;">
-          <span style="color:{LIGHT_BLUE_BG};font-size:11px;font-weight:600;
-                       font-family:Arial,Helvetica,sans-serif;letter-spacing:1px;">
+        <td style="padding:12px 24px 12px 0;vertical-align:middle;text-align:right;">
+          <span style="display:block;color:{LIGHT_BLUE_BG};font-size:11px;font-weight:600;
+                       font-family:Arial,Helvetica,sans-serif;letter-spacing:1px;
+                       text-transform:uppercase;line-height:1.4;">
             {BRAND_TAGLINE}
+          </span>
+          <span style="display:block;color:{WHITE};font-size:11px;font-weight:500;
+                       font-family:Arial,Helvetica,sans-serif;letter-spacing:0.5px;
+                       margin-top:4px;line-height:1.4;">
+            &#10003;&nbsp;Cvent Certified Professionals &nbsp;&middot;&nbsp; 15+ Years Experience
           </span>
         </td>
       </tr>
