@@ -243,8 +243,11 @@ async def sendgrid_events(
     # Always return 200 so SendGrid doesn't retry
     try:
         body = await request.json()
-    except Exception:
+    except Exception as e:
+        logger.warning("sendgrid_events: failed to parse JSON body: %s", e)
         return {"status": "ok"}
+
+    logger.info("sendgrid_events: received %d event(s): %s", len(body) if isinstance(body, list) else 0, [e.get("event") for e in body] if isinstance(body, list) else body)
 
     if not isinstance(body, list):
         return {"status": "ok"}
@@ -280,7 +283,7 @@ async def sendgrid_events(
             )
             message = msg_res.scalar_one_or_none()
             if not message:
-                logger.debug("sendgrid_events: no message for sg_message_id=%s", base_id)
+                logger.info("sendgrid_events: no message for sg_message_id=%s (base=%s)", sg_message_id, base_id)
                 continue
 
             # For opens: only record the first open per message (dedup)
