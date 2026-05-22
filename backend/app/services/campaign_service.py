@@ -326,6 +326,22 @@ class CampaignService:
             for r in rep_result.scalars().all():
                 replies_by_msg.setdefault(r.message_id, []).append(r)
 
+        # ── First open timestamp keyed by message_id ──────────────
+        from app.models.campaign import EmailEvent
+        from sqlalchemy import func as sqlfunc
+        opened_at_by_msg: dict[uuid.UUID, datetime] = {}
+        if msg_ids:
+            open_res = await self.db.execute(
+                select(EmailEvent.message_id, sqlfunc.min(EmailEvent.created_at).label("first_open"))
+                .where(
+                    EmailEvent.message_id.in_(msg_ids),
+                    EmailEvent.event_type == "opened",
+                )
+                .group_by(EmailEvent.message_id)
+            )
+            for row in open_res.all():
+                opened_at_by_msg[row.message_id] = row.first_open
+
         # ── Outbound responses we sent (direction=outbound, thread context) ──
         # These are Message rows with direction='outbound' whose thread_id matches
         # a reply's thread context – we identify them by sequence_step=None and
@@ -394,6 +410,7 @@ class CampaignService:
                     body_text=m.body_text,
                     status=m.status,
                     sent_at=m.sent_at,
+                    opened_at=opened_at_by_msg.get(m.id),
                     ai_generated=m.ai_generated,
                     replies=report_replies,
                 ))

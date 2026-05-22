@@ -50,6 +50,7 @@ interface ReportMessage {
   body_text: string | null;
   status: string;
   sent_at: string | null;
+  opened_at: string | null;
   ai_generated: boolean;
   replies: ReportReply[];
 }
@@ -301,6 +302,12 @@ function MessageRow({ message, isLast }: { message: ReportMessage; isLast: boole
               {message.ai_generated && (
                 <span className="rounded-full bg-violet-500/15 border border-violet-500/25 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-violet-300">
                   AI
+                </span>
+              )}
+              {message.opened_at && (
+                <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+                  <MailOpen className="h-3 w-3" />
+                  Opened
                 </span>
               )}
               <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', cfg.cls)}>

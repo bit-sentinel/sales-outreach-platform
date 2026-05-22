@@ -204,6 +204,7 @@ class ReportMessage(BaseModel):
     body_text: str | None
     status: str
     sent_at: datetime | None
+    opened_at: datetime | None
     ai_generated: bool
     replies: list[ReportReply]
 

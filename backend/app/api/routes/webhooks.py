@@ -218,3 +218,118 @@ async def sendgrid_inbound(
         from_email, subject, intent,
     )
     return {"status": "ok"}
+
+
+@router.post("/sendgrid/events")
+async def sendgrid_events(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Receives SendGrid Event Webhook (open, click, bounce, delivered, etc.).
+
+    Configure in SendGrid dashboard → Settings → Mail Settings → Event Webhook:
+      URL: https://launch-house.uk/api/v1/webhooks/sendgrid/events
+      Enable: Opens, Clicks, Bounces, Delivered
+
+    SendGrid POSTs a JSON array of event objects. Each has:
+      - sg_message_id: matches messages.message_id
+      - event: "open" | "click" | "delivered" | "bounce" | ...
+      - timestamp: unix epoch
+    """
+    from datetime import datetime, timezone
+    from app.models.campaign import Message, EmailEvent, Campaign
+
+    # Always return 200 so SendGrid doesn't retry
+    try:
+        body = await request.json()
+    except Exception:
+        return {"status": "ok"}
+
+    if not isinstance(body, list):
+        return {"status": "ok"}
+
+    processed = 0
+    for evt in body:
+        try:
+            event_type: str = evt.get("event", "")
+            sg_message_id: str = evt.get("sg_message_id", "")
+            if not sg_message_id or not event_type:
+                continue
+
+            # sg_message_id may have a suffix like ".filter0001.12345..."
+            # Strip everything after the first dot-filter segment
+            base_id = re.split(r"\.filter", sg_message_id)[0]
+
+            # Normalise event type to our naming
+            event_map = {
+                "open": "opened",
+                "click": "clicked",
+                "delivered": "delivered",
+                "bounce": "bounced",
+                "spamreport": "complained",
+                "unsubscribe": "unsubscribed",
+                "deferred": "deferred",
+                "dropped": "dropped",
+            }
+            normalised = event_map.get(event_type, event_type)
+
+            # Find the matching message
+            msg_res = await db.execute(
+                select(Message).where(Message.message_id == base_id)
+            )
+            message = msg_res.scalar_one_or_none()
+            if not message:
+                logger.debug("sendgrid_events: no message for sg_message_id=%s", base_id)
+                continue
+
+            # For opens: only record the first open per message (dedup)
+            if normalised == "opened":
+                existing = await db.execute(
+                    select(EmailEvent).where(
+                        EmailEvent.message_id == message.id,
+                        EmailEvent.event_type == "opened",
+                    ).limit(1)
+                )
+                if existing.scalar_one_or_none():
+                    logger.debug("sendgrid_events: duplicate open for message %s", message.id)
+                    continue
+
+                # Increment campaign open count
+                if message.campaign_id:
+                    camp_res = await db.execute(
+                        select(Campaign).where(Campaign.id == message.campaign_id)
+                    )
+                    campaign = camp_res.scalar_one_or_none()
+                    if campaign:
+                        campaign.open_count = (campaign.open_count or 0) + 1
+
+            ip = evt.get("ip", "") or ""
+            ua = evt.get("useragent", "") or ""
+            ts = evt.get("timestamp")
+            created = (
+                datetime.fromtimestamp(ts, tz=timezone.utc) if ts else datetime.now(timezone.utc)
+            )
+
+            email_event = EmailEvent(
+                tenant_id=message.tenant_id,
+                message_id=message.id,
+                event_type=normalised,
+                ip_address=ip[:45] if ip else None,
+                user_agent=ua[:500] if ua else None,
+                metadata_={"raw_event": event_type, "sg_message_id": sg_message_id},
+            )
+            # Override created_at with SendGrid's timestamp
+            email_event.created_at = created
+            db.add(email_event)
+            processed += 1
+
+        except Exception as e:
+            logger.warning("sendgrid_events: error processing event %s: %s", evt, e)
+            continue
+
+    if processed:
+        await db.commit()
+
+    logger.info("sendgrid_events: processed %d events", processed)
+    return {"status": "ok"}
