@@ -260,9 +260,9 @@ async def sendgrid_events(
             if not sg_message_id or not event_type:
                 continue
 
-            # sg_message_id may have a suffix like ".filter0001.12345..."
-            # Strip everything after the first dot-filter segment
-            base_id = re.split(r"\.filter", sg_message_id)[0]
+            # sg_message_id has suffixes like ".filterdrecv-..." (opens) or ".recvd-..." (delivered)
+            # Base ID is always everything before the first "."
+            base_id = sg_message_id.split(".")[0]
 
             # Normalise event type to our naming
             event_map = {
