@@ -326,21 +326,25 @@ class CampaignService:
             for r in rep_result.scalars().all():
                 replies_by_msg.setdefault(r.message_id, []).append(r)
 
-        # ── First open timestamp keyed by message_id ──────────────
+        # ── First open/delivered timestamp keyed by message_id ──────────
         from app.models.campaign import EmailEvent
         from sqlalchemy import func as sqlfunc
         opened_at_by_msg: dict[uuid.UUID, datetime] = {}
+        delivered_at_by_msg: dict[uuid.UUID, datetime] = {}
         if msg_ids:
-            open_res = await self.db.execute(
-                select(EmailEvent.message_id, sqlfunc.min(EmailEvent.created_at).label("first_open"))
+            event_res = await self.db.execute(
+                select(EmailEvent.message_id, EmailEvent.event_type, sqlfunc.min(EmailEvent.created_at).label("first_ts"))
                 .where(
                     EmailEvent.message_id.in_(msg_ids),
-                    EmailEvent.event_type == "opened",
+                    EmailEvent.event_type.in_(["opened", "delivered"]),
                 )
-                .group_by(EmailEvent.message_id)
+                .group_by(EmailEvent.message_id, EmailEvent.event_type)
             )
-            for row in open_res.all():
-                opened_at_by_msg[row.message_id] = row.first_open
+            for row in event_res.all():
+                if row.event_type == "opened":
+                    opened_at_by_msg[row.message_id] = row.first_ts
+                elif row.event_type == "delivered":
+                    delivered_at_by_msg[row.message_id] = row.first_ts
 
         # ── Outbound responses we sent (direction=outbound, thread context) ──
         # These are Message rows with direction='outbound' whose thread_id matches
@@ -410,6 +414,7 @@ class CampaignService:
                     body_text=m.body_text,
                     status=m.status,
                     sent_at=m.sent_at,
+                    delivered_at=delivered_at_by_msg.get(m.id),
                     opened_at=opened_at_by_msg.get(m.id),
                     ai_generated=m.ai_generated,
                     replies=report_replies,
