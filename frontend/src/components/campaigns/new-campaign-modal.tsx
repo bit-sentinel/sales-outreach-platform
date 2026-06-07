@@ -44,6 +44,30 @@ const tierConfig: Record<string, { label: string; className: string }> = {
   cold: { label: 'Cold', className: 'bg-white/10 text-white/40' },
 };
 
+function addBusinessDays(start: Date, days: number): Date {
+  const result = new Date(start);
+  let added = 0;
+  while (added < days) {
+    result.setDate(result.getDate() + 1);
+    const dow = result.getDay(); // 0=Sun,1=Mon,...,5=Sat,6=Sun
+    if (dow >= 1 && dow <= 4) added++; // Mon–Thu only
+  }
+  return result;
+}
+
+function formatIST(date: Date): string {
+  return date.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  }) + ' IST';
+}
+
 function defaultStep(n: number): SequenceStep {
   return {
     step: n,
@@ -211,6 +235,13 @@ export function NewCampaignModal({ open, onClose, onCreated }: Props) {
 
   if (!open) return null;
 
+  // Compute estimated send date for each step (business days Mon–Thu, skipping Fri/Sat/Sun)
+  const stepDates = steps.reduce<Date[]>((acc, step, i) => {
+    if (i === 0) return [...acc, new Date()];
+    const prev = acc[i - 1];
+    return [...acc, addBusinessDays(new Date(prev), Math.max(step.delay_days, 1))];
+  }, []);
+
   return (
     <div
       ref={backdropRef}
@@ -366,7 +397,7 @@ export function NewCampaignModal({ open, onClose, onCreated }: Props) {
                         {i > 0 && (
                           <div className="mb-3 flex flex-wrap items-center gap-4">
                             <div>
-                              <label className="mb-1 block text-[11px] font-semibold text-white/40">Delay (days after previous)</label>
+                              <label className="mb-1 block text-[11px] font-semibold text-white/40">Delay (business days after previous)</label>
                               <input
                                 type="number"
                                 min={1}
@@ -375,6 +406,9 @@ export function NewCampaignModal({ open, onClose, onCreated }: Props) {
                                 onChange={(e) => updateStep(i, { delay_days: Number(e.target.value) })}
                                 className="w-24 rounded-[10px] border border-white/[0.10] bg-white/[0.06] px-3 py-1.5 text-sm text-white focus:border-[#1c8ed4] focus:outline-none"
                               />
+                              <p className="mt-1 text-[10px] text-[#60b7e8]/80">
+                                {formatIST(stepDates[i])}
+                              </p>
                             </div>
                             <label className="flex items-center gap-1.5 cursor-pointer mt-4">
                               <input

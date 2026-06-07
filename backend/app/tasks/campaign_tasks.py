@@ -8,6 +8,18 @@ from app.celery_app import celery_app
 from app.tasks.personalization_payloads import build_personalization_payload
 
 
+def _add_business_days(start_dt, days: int):
+    """Add N business days (Mon–Thu) to a datetime, skipping Fri/Sat/Sun."""
+    from datetime import timedelta
+    result = start_dt
+    added = 0
+    while added < days:
+        result += timedelta(days=1)
+        if result.weekday() < 4:  # 0=Mon, 1=Tue, 2=Wed, 3=Thu
+            added += 1
+    return result
+
+
 def _make_session_factory():
     """Create a fresh engine + session factory for this OS process / event loop."""
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -71,11 +83,16 @@ async def _process_campaign_lead_async(campaign_lead_id: str):
 
     session_factory = _make_session_factory()
     async with session_factory() as db:
+        # SELECT FOR UPDATE prevents two concurrent workers from processing the
+        # same lead simultaneously (race condition that generates duplicate drafts).
         result = await db.execute(
-            select(CampaignLead).where(CampaignLead.id == uuid.UUID(campaign_lead_id))
+            select(CampaignLead)
+            .where(CampaignLead.id == uuid.UUID(campaign_lead_id))
+            .with_for_update(skip_locked=True)
         )
         cl = result.scalar_one_or_none()
         if not cl:
+            # Another worker is already processing this lead — skip silently.
             return
 
         # Get campaign sequence
@@ -258,12 +275,16 @@ async def _process_campaign_lead_async(campaign_lead_id: str):
                         sender_company="LaunchHouse Events",
                         sender_site_url=sender_info.get("company_site_url", "https://launchhouse.events/"),
                         sender_calendar_link=sender_info.get("sender_calendar_link") or "",
+                        sender_phone="+1 (571) 444-8523",
+                        sender_email="sam@launchhouse.events",
                     )
                     _plain = render_email_plain(
                         body_text=_body,
                         sender_name="Sameera Gurung",
                         sender_site_url=sender_info.get("company_site_url", "https://launchhouse.events/"),
                         sender_calendar_link=sender_info.get("sender_calendar_link") or "",
+                        sender_phone="+1 (571) 444-8523",
+                        sender_email="sam@launchhouse.events",
                     )
                     email_content = {
                         "subject": _subj,
@@ -351,16 +372,17 @@ async def _process_campaign_lead_async(campaign_lead_id: str):
             from datetime import timedelta
             next_delay = sequence[next_step_idx].get("delay_days", 1)
             _test_mode_active = (campaign.settings or {}).get("test_mode_snapshot", {}).get("enabled", False)
+            now_utc = datetime.now(timezone.utc)
             if _test_mode_active:
-                delta = timedelta(minutes=max(next_delay, 1))
+                scheduled_at = now_utc + timedelta(minutes=max(next_delay, 1))
             else:
-                delta = timedelta(days=max(next_delay, 1))
+                scheduled_at = _add_business_days(now_utc, max(next_delay, 1))
             from app.models.campaign import FollowUp
             follow_up = FollowUp(
                 tenant_id=cl.tenant_id,
                 campaign_lead_id=cl.id,
                 step_number=next_step_idx,
-                scheduled_at=datetime.now(timezone.utc) + delta,
+                scheduled_at=scheduled_at,
                 status="scheduled",
             )
             db.add(follow_up)
