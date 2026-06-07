@@ -141,7 +141,7 @@ export function NewCampaignModal({ open, onClose, onCreated }: Props) {
       }> }>({
         method: 'GET',
         url: '/leads',
-        params: { page: 1, page_size: 100, sort_by: 'updated_at', sort_dir: 'desc' },
+        params: { page: 1, page_size: 500, sort_by: 'updated_at', sort_dir: 'desc' },
       });
       const scored = data.items
         .filter((l) => l.score_tier != null)
