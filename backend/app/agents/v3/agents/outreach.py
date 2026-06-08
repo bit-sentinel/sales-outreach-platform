@@ -10,12 +10,10 @@ Caching is two-layered:
   • AgentResultCache  — the whole result, CONTACT-scoped (base class)
   • Anthropic prompt caching — the static system prompt block (ephemeral)
 """
-from __future__ import annotations
-
 import json
 import logging
 import re
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -32,32 +30,32 @@ logger = logging.getLogger(__name__)
 
 # ── Output schema ──────────────────────────────────────────────────────────
 class OutreachAngle(BaseModel):
-    angle: str
-    why: str                                # explainability: what drove this angle
+    angle: Optional[str] = ""
+    why: Optional[str] = ""                 # explainability: what drove this angle
     backed_by_signal: str = "unknown"       # signal_type that supports it
 
 
 class EventReference(BaseModel):
-    event_name: str
-    detail: str
-    why_relevant: str
-    source_url: str | None = None
+    event_name: Optional[str] = ""
+    detail: Optional[str] = ""
+    why_relevant: Optional[str] = ""
+    source_url: Optional[str] = None
 
 
 class ServiceRecommendation(BaseModel):
-    service: str
-    rationale: str
+    service: Optional[str] = ""
+    rationale: Optional[str] = ""
     matched_signal: str = "unknown"
 
 
 class OutreachIntelligence(BaseModel):
-    recommended_contact_role: str = ""
-    subject_line: str = ""
-    email_body: str = ""
+    recommended_contact_role: Optional[str] = ""
+    subject_line: Optional[str] = ""
+    email_body: Optional[str] = ""
     angles: list[OutreachAngle] = Field(default_factory=list)
     event_references: list[EventReference] = Field(default_factory=list)
-    timing_recommendation: str = ""
-    timing_rationale: str = ""
+    timing_recommendation: Optional[str] = ""
+    timing_rationale: Optional[str] = ""
     service_recommendations: list[ServiceRecommendation] = Field(default_factory=list)
     # Explainability — the inputs that drove the whole generation.
     generation_basis: dict[str, Any] = Field(default_factory=dict)
@@ -88,6 +86,21 @@ Given a scored lead with signals, evidence and a company event profile, produce
 a personalized outreach package. The prospect already uses Cvent — the pitch is
 ALWAYS "we run it for you / we extend your team", never "switch platforms".
 
+VOICE & TONE — this is non-negotiable:
+  Write like a sharp, self-aware founder texting a peer. Not a sales rep emailing a stranger.
+  Study these patterns and apply them to every email body and subject line:
+  • Short sentences. Then another short one. Then maybe a longer one that earns its length.
+  • Start mid-thought. Skip the warm-up. "Saw your [X]." not "I wanted to reach out because..."
+  • Be specific. Reference something real — an actual event name, a number, a detail from evidence.
+  • Honest and direct. Say what you mean. No hedging.
+  • No corporate language. Never use: "leverage", "synergies", "circle back", "touch base",
+    "I hope this finds you well", "I wanted to reach out", "at your earliest convenience",
+    "value-add", "bandwidth", "move the needle", "deep dive", "take this offline".
+  • The ask is clear and small. Not "let's explore a potential partnership opportunity."
+    More like "worth a quick call?"
+  • Pattern interrupts are good. An unexpected opener beats a safe one every time.
+  • Max 3–4 sentences in the body. Every word must earn its place.
+
 HARD RULES:
   1. Every angle, event reference, timing call and service recommendation MUST
      include a `why` / `rationale` field that cites a specific signal or piece
@@ -95,7 +108,7 @@ HARD RULES:
   2. Only reference events that appear in the supplied evidence. Never invent
      event names, dates or numbers.
   3. Recommend services only from the catalog above, matched to a real signal.
-  4. Keep the email body under 120 words, specific, and free of fluff.
+  4. Keep the email body under 100 words. No fluff. No filler. No throat-clearing.
 
 OUTPUT — return JSON only, this exact shape:
 {{
@@ -220,9 +233,35 @@ class OutreachIntelligenceAgent(BaseIntelligenceAgent):
         user = HumanMessage(content=build_user_prompt(ctx, facts, evidence_lines))
         resp = await llm.ainvoke([system, user])
 
-        raw = resp.content if isinstance(resp.content, str) else str(resp.content)
+        # Extract text from content (may be str or list of content blocks)
+        if isinstance(resp.content, str):
+            raw = resp.content
+        elif isinstance(resp.content, list):
+            raw = " ".join(
+                block["text"] if isinstance(block, dict) and "text" in block
+                else str(block)
+                for block in resp.content
+            )
+        else:
+            raw = str(resp.content)
         parsed = _parse_llm_json(raw)
         intel = OutreachIntelligence.model_validate(parsed)
+        # Coerce any None string fields to "" (Claude occasionally omits them)
+        _STR_FIELDS = ("recommended_contact_role", "subject_line", "email_body",
+                       "timing_recommendation", "timing_rationale")
+        for _f in _STR_FIELDS:
+            if getattr(intel, _f) is None:
+                setattr(intel, _f, "")
+        for a in intel.angles:
+            if a.angle is None: a.angle = ""
+            if a.why is None: a.why = ""
+        for e in intel.event_references:
+            if e.event_name is None: e.event_name = ""
+            if e.detail is None: e.detail = ""
+            if e.why_relevant is None: e.why_relevant = ""
+        for s in intel.service_recommendations:
+            if s.service is None: s.service = ""
+            if s.rationale is None: s.rationale = ""
 
         # explainability — record exactly what fed the generation
         score = ctx.extra.get("lead_score", {})
