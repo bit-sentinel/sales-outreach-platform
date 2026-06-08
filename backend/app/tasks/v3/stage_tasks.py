@@ -420,12 +420,8 @@ def _make_stage_task(stage: PipelineStage):
         rid, lid = UUID(run_id), UUID(lead_id)
         try:
             if stage is PipelineStage.SCORE:
-                gate2 = asyncio.run(_run_score_stage(rid, lid))
-                if gate2:
-                    _dispatch_next(stage, run_id, lead_id)
-                else:
-                    logger.info("[v3] Gate 2 not passed — stopping before Stage 6")
-                    asyncio.run(_mark_job_done(rid, "completed"))
+                asyncio.run(_run_score_stage(rid, lid))
+                _dispatch_next(stage, run_id, lead_id)
                 return
 
             asyncio.run(_run_collection_stage(stage, rid, lid))
