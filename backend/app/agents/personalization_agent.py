@@ -100,15 +100,16 @@ STEP 1 (first email) — BEST SHOT
   Build window framing (event 31-120 days): "[event] in [date phrase] — the build plan is getting real."
 
 STEP 2 (first follow-up, THREADED — empty subject line, threads to Email 1) — DIFFERENT VALUE PROP
-  Philosophy: They saw email 1 but didn't reply. That angle didn't land. Rotate.
+  Philosophy: They saw email 1 but didn't reply. That angle didn't land. Rotate + deliver value.
   Angle: MAKE MONEY / ADD CAPACITY ("do more events without adding headcount")
   CRITICAL: Never start with "Following up", "Just checking in", "One more thought", "Checking back in".
   Lead with a punchy standalone first line as if they've never heard from you.
-  If a resource adds genuine value here (checklist for pre-launch QA), offer it as the value exchange.
+  ALWAYS include the checklist as a concrete value-exchange CTA — no exceptions.
+  Format: "Cvent Pre-Launch QA Checklist -> {{checklist_link}}"
   Good opener examples:
     "Most event teams hit a wall when the calendar grows faster than headcount."
     "Fixed-fee builds mean no scope surprises when timelines compress."
-  Checklist offer format if relevant: "Cvent Pre-Launch QA Checklist -> {{checklist_link}}"
+  Structure: situation line -> value prop sentence -> checklist offer -> soft CTA ("if useful, take a look")
 
 STEP 3 (second follow-up, NEW THREAD — new subject line) — DIFFERENT ANGLE ENTIRELY
   Philosophy: Start completely fresh. Different subject, treat it as first contact.
