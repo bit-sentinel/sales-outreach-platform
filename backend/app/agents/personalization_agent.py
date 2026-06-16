@@ -99,9 +99,11 @@ STEP 1 (first email) — BEST SHOT
   Rush framing (event 0-30 days out): "X days to [event] — if anything's on the fix list, we hold rush capacity."
   Build window framing (event 31-120 days): "[event] in [date phrase] — the build plan is getting real."
 
-STEP 2 (first follow-up, THREADED — empty subject line, threads to Email 1) — DIFFERENT VALUE PROP
-  Philosophy: They saw email 1 but didn't reply. That angle didn't land. Rotate + deliver value.
+STEP 2 (first follow-up, OWN SUBJECT LINE) — DIFFERENT VALUE PROP + CHECKLIST
+  Philosophy: Treat this as a standalone email. Different subject, different angle, different value prop.
   Angle: MAKE MONEY / ADD CAPACITY ("do more events without adding headcount")
+  Subject: resource or pain-point framing, different from Step 0.
+    Examples: "Cvent pre-launch checklist" / "something useful, [first_name]" / "[company_name] build timeline"
   CRITICAL: Never start with "Following up", "Just checking in", "One more thought", "Checking back in".
   Lead with a punchy standalone first line as if they've never heard from you.
   ALWAYS include the checklist as a concrete value-exchange CTA — no exceptions.

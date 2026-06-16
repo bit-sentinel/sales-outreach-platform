@@ -106,7 +106,21 @@ async def _send_email_async(message_id: str):
                 from sendgrid import SendGridAPIClient
                 from sendgrid.helpers.mail import Mail, To, From, Content
 
-                subject = message.subject or "(no subject)"
+                subject = message.subject or ""
+                if not subject and message.sequence_step and message.sequence_step > 0 and message.campaign_id:
+                    # No subject on a follow-up — find previous step's subject as fallback
+                    from app.models.campaign import Message as Msg
+                    prev = (await db.execute(
+                        select(Msg).where(
+                            Msg.campaign_id == message.campaign_id,
+                            Msg.lead_id == message.lead_id,
+                            Msg.sequence_step == message.sequence_step - 1,
+                            Msg.subject.isnot(None),
+                        )
+                    )).scalar_one_or_none()
+                    if prev and prev.subject:
+                        subject = f"Re: {prev.subject}"
+                subject = subject or "(no subject)"
 
                 sg_message = Mail(
                     from_email=From(from_email, from_name),
