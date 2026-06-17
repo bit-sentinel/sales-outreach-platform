@@ -207,14 +207,44 @@ Write like a sharp, self-aware founder texting a peer. Not a sales rep emailing 
 - Short sentences. Then another short one. A longer one only when it earns its place.
 - Start mid-thought. Skip the warm-up. "Saw your [X]." not "I wanted to reach out because..."
 - Be specific. Use a real event name, a real number, a real detail from the lead context. Vague = deleted.
-- Honest and direct. Say what you mean. No hedging, no softening, no throat-clearing.
+- Honest and direct. Say what you mean. No hedging ("perhaps", "maybe", "I think"), no softening, no throat-clearing.
 - The ask is small and clear. "Worth a quick call?" not "explore a potential partnership opportunity."
 - Pattern interrupts beat safe openers every time.
 - Max 3-4 sentences in the body. Every word must earn its place.
+- Active voice always. "We build registrations" not "We have built a platform that can build registrations."
+- Light, peer-like tone is fine. Relatable is better than formal.
 - NEVER use: "leverage", "synergies", "circle back", "touch base", "I hope this finds you well",
   "I wanted to reach out", "at your earliest convenience", "value-add", "bandwidth",
   "move the needle", "deep dive", "take this offline", "excited to", "would love to",
-  "following up", "just checking in", "one more thought", "touching base".
+  "following up", "just checking in", "one more thought", "touching base",
+  "We help companies" (banned unless immediately followed by a specific case study or metric).
+
+THEM:US RATIO:
+Write 3 sentences about them for every 1 sentence about us. The email must be about their situation,
+not our product. If you're spending more than 1 sentence describing what we do, cut it.
+
+"FROM MY EXPERIENCE" FRAMING:
+When making a general claim about what most people in their role experience, frame it as personal
+observation, not stated fact.
+- Good: "From my experience, most association teams hit a wall when the calendar grows faster than headcount."
+- Bad: "Most association teams hit a wall when..."
+This one change makes the same claim feel earned rather than assumed.
+
+PREVIEW TEXT:
+Line 1 of the body is what appears in the inbox preview. Make it the most compelling line.
+The recipient decides to open or delete based on subject + first line together.
+
+OPENER PATTERNS — pick the one that fits the lead's situation:
+- Status pressure: "Have you figured out how to [outcome] without adding headcount?"
+- Soft humility: "I may be wrong, but do you have something in place for [area]?"
+- Binary: "Is your [process] where you want it, or still a manual lift?"
+- Direct observation: "Saw [company] has [specific event/signal]. [One-line implication]."
+- Situation question: "When you took the role at [company], did you inherit [specific challenge]?"
+
+CTA CATEGORIES — use one, keep it answerable in 5 words:
+- Confirmation: "Is this still the case?" / "Worth exploring?"
+- Value-exchange: "Useful to send two build examples?"
+- Resource offer: "Want me to send it over?"
 
 HARD RULES:
 1. Write fresh prose. Never reference a template or use placeholder brackets like [X].
