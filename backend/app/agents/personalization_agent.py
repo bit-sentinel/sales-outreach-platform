@@ -286,31 +286,21 @@ Do not fill in a template — write original prose using the signals from the le
         # ── Wrap body content in the LaunchHouse branded HTML template ────────
         try:
             from app.tools.email_renderer import HeaderStyle, render_email_html, render_email_plain
-            from app.config import get_settings
 
             raw_body = parsed.get("body_text") or parsed.get("body_html") or ""
-            _settings = get_settings()
 
-            # Determine sender info from context
-            _sender = sender_info or {}
-            if isinstance(_sender, str):
-                _sender = {}
-            _sender_name = "Sameera Gurung"
-            _sender_company = _sender.get("company") or "LaunchHouse Events"
-            _sender_role = _sender.get("role") or "Cvent Registration & Event Technology Operations"
-            _sender_site = _sender.get("site_url") or _sender.get("company_site_url") or "https://launchhouse.events/"
-            _sender_cal = _sender.get("calendar_link") or _sender.get("sender_calendar_link") or ""
+            _sender = sender_info if isinstance(sender_info, dict) else {}
             _checklist_link = (
                 _sender.get("checklist_link")
                 or _sender.get("checklist_url")
-                or _settings.checklist_download_url
                 or "https://launch-house.uk/checklist"
             )
+            _sender_cal = _sender.get("calendar_link") or _sender.get("sender_calendar_link") or ""
 
             if "{{checklist_link}}" in raw_body:
                 raw_body = raw_body.replace("{{checklist_link}}", _checklist_link)
 
-            # Option 3 CTA: button in HTML, short branded fallback in plain text
+            # Checklist CTA: button in HTML, plain-text fallback
             _checklist_display = re.sub(r"^https?://", "", _checklist_link).rstrip("/")
             _cta_line_re = re.compile(r"^\s*Cvent Pre-Launch QA Checklist\s*[→\-]*>?\s*.+$", re.I | re.M)
             _cta_plain = f"Download the Cvent Pre-Launch QA Checklist: {_checklist_display}"
@@ -321,32 +311,21 @@ Do not fill in a template — write original prose using the signals from the le
                 f'font-size:11px;line-height:1.2;">'
                 f'Download the Cvent Pre-Launch QA Checklist</a>'
             )
-
             raw_body_plain = _cta_line_re.sub(_cta_plain, raw_body)
             raw_body_html = _cta_line_re.sub(_cta_button, raw_body)
 
-            _step = step_config.get("step", 1) if step_config else 1
-            _header = HeaderStyle.SLIM
-
-            _lead = lead_data or {}
-            if isinstance(_lead, str):
-                _lead_lower = _lead.lower()
-                _compact = _step >= 3 or any(t in _lead_lower for t in ("director", "vp ", "vice president", "head of", "chief", " coo", " cmo", " cto", " ceo"))
-            else:
-                _title = str(_lead.get("title", "") or _lead.get("job_title", "")).lower()
-                _compact = _step >= 3 or any(t in _title for t in ("director", "vp ", "vice president", "head of", "chief", "coo", "cmo", "cto", "ceo"))
-
+            # Same template for every email — no compact/seniority variations
             branded_html = render_email_html(
                 body_text=raw_body_html,
-                sender_name=_sender_name,
-                sender_company=_sender_company,
-                sender_role=_sender_role,
-                sender_site_url=_sender_site,
+                sender_name="Sameera Gurung",
+                sender_company="LaunchHouse Events",
+                sender_role="Cvent Registration & Event Technology Operations",
+                sender_site_url="https://launchhouse.events/",
                 sender_calendar_link=_sender_cal,
                 sender_phone="+1 (571) 444-8523",
                 sender_email="sam@launchhouse.events",
-                header_style=_header,
-                compact_signature=_compact,
+                header_style=HeaderStyle.SLIM,
+                compact_signature=False,
             )
             branded_html = re.sub(
                 r'<p[^>]*>\s*Download the Cvent Pre-Launch QA Checklist:\s*<a href="([^"]+)"[^>]*>[^<]+</a>\s*</p>',
@@ -363,8 +342,8 @@ Do not fill in a template — write original prose using the signals from the le
             )
             plain_text = render_email_plain(
                 body_text=raw_body_plain,
-                sender_name=_sender_name,
-                sender_site_url=_sender_site,
+                sender_name="Sameera Gurung",
+                sender_site_url="https://launchhouse.events/",
                 sender_calendar_link=_sender_cal,
                 sender_phone="+1 (571) 444-8523",
                 sender_email="sam@launchhouse.events",
