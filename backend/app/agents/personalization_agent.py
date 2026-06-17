@@ -40,6 +40,37 @@ def _resolve_sender_name(email: str, display_name: str = "") -> str:
     return " ".join(part.capitalize() for part in re.split(r"[._\-]", username)) or "Sameera Gurung"
 
 
+def _strip_body_signatures(text: str) -> str:
+    """Remove any LLM-appended signature block from the email body.
+
+    Handles two patterns:
+    1. "Best," sign-off (caught by _strip_llm_signature from email_renderer)
+    2. Bare name/company/email block appended without "Best," (e.g. "Sameera Gurung\\nLaunchHouse Events\\nsam@...")
+    """
+    from app.tools.email_renderer import _strip_llm_signature
+    # Pass 1: strip from "Best," onwards
+    text = _strip_llm_signature(text)
+    # Pass 2: strip trailing paragraphs that look like a contact block
+    # (contains an @ address, or is all short lines with no sentence-ending punctuation)
+    paragraphs = re.split(r"\n\s*\n", text.strip())
+    while len(paragraphs) > 1:
+        last = paragraphs[-1].strip()
+        lines = [l.strip() for l in last.splitlines() if l.strip()]
+        if not lines:
+            paragraphs.pop()
+            continue
+        has_email = any("@" in l for l in lines)
+        looks_like_sig = (
+            all(len(l) < 60 and not re.search(r"[.?!]$", l) for l in lines)
+            and len(lines) <= 5
+        )
+        if has_email or looks_like_sig:
+            paragraphs.pop()
+        else:
+            break
+    return "\n\n".join(paragraphs).strip()
+
+
 class EmailOutput(BaseModel):
     subject: str = Field(description="Email subject line, under 8 words")
     body_html: str = Field(description="HTML email body, fully written and resolved")
@@ -257,6 +288,7 @@ HARD RULES:
 8. Do NOT include arbitrary URLs in the email body. The only allowed link token is {{checklist_link}}.
 9. Resolve sender as the human BDR. The body_text is plain text. The body_html wraps it in <p> tags.
 10. NEVER use em dashes (—). Use a regular hyphen (-) if you need a dash at all. Em dashes read as AI-written.
+11. Do NOT include any signature, sign-off, name, or closing in body_text or body_html. End with the CTA line only. The signature (name, company, contact details) is appended automatically — if you write one it will appear twice.
 """
 
 
@@ -342,6 +374,8 @@ Do not fill in a template — write original prose using the signals from the le
             raw_body = parsed.get("body_text") or parsed.get("body_html") or ""
             # Replace em dashes with a plain hyphen regardless of LLM output
             raw_body = raw_body.replace("—", " - ")
+            # Strip any LLM-appended signature (name/email/company block or "Best,")
+            raw_body = _strip_body_signatures(raw_body)
 
             _sender = sender_info if isinstance(sender_info, dict) else {}
             _checklist_link = (
