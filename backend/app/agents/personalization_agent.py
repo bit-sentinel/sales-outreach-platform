@@ -226,6 +226,7 @@ HARD RULES:
 7. {{checklist_link}} may remain as-is — it is resolved server-side.
 8. Do NOT include arbitrary URLs in the email body. The only allowed link token is {{checklist_link}}.
 9. Resolve sender as the human BDR. The body_text is plain text. The body_html wraps it in <p> tags.
+10. NEVER use em dashes (—). Use a regular hyphen (-) if you need a dash at all. Em dashes read as AI-written.
 """
 
 
@@ -309,6 +310,8 @@ Do not fill in a template — write original prose using the signals from the le
             from app.tools.email_renderer import HeaderStyle, render_email_html, render_email_plain
 
             raw_body = parsed.get("body_text") or parsed.get("body_html") or ""
+            # Replace em dashes with a plain hyphen regardless of LLM output
+            raw_body = raw_body.replace("—", " - ")
 
             _sender = sender_info if isinstance(sender_info, dict) else {}
             _checklist_link = (
