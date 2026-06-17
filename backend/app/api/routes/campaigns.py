@@ -316,20 +316,65 @@ async def update_campaign_message(
                 sa = sa_res.scalar_one_or_none()
                 if sa and _settings.sender_calendar_link:
                     sender_calendar_link = _settings.sender_calendar_link
-            message.body_html = render_email_html(
+            import re as _re
+            _checklist_link = _settings.checklist_download_url or "https://launch-house.uk/checklist"
+            _checklist_display = _re.sub(r"^https?://", "", _checklist_link).rstrip("/")
+
+            _rendered_html = render_email_html(
                 body_text=body["body_text"],
                 sender_name=sender_name,
                 sender_company=sender_company,
                 sender_role=sender_role,
                 sender_site_url=sender_site_url,
                 sender_calendar_link=sender_calendar_link,
+                sender_phone="+1 (571) 444-8523",
+                sender_email="sam@launchhouse.events",
             )
-            message.body_text = render_email_plain(
+            # Re-apply checklist CTA button (same transform as generation pipeline)
+            # Pattern 1: original arrow+link format (first-time render from template)
+            _rendered_html = _re.sub(
+                r'<p[^>]*>\s*Cvent Pre-Launch QA Checklist\s*-&gt;\s*<a href="([^"]+)"[^>]*>[^<]+</a>\s*</p>',
+                (
+                    r'<div style="margin:14px 0 8px;">'
+                    r'<a href="\1" '
+                    r'style="display:inline-block;padding:8px 13px;border-radius:6px;'
+                    r'background:#1c8ed4;color:#ffffff;text-decoration:none;font-weight:600;'
+                    r'font-size:11px;line-height:1.2;">'
+                    r'Download the Cvent Pre-Launch QA Checklist</a></div>'
+                ),
+                _rendered_html,
+                flags=_re.I,
+            )
+            # Pattern 2: plain-text form (body_text already contains the short-link line after a previous edit)
+            _rendered_html = _re.sub(
+                r'<p[^>]*>\s*Download the Cvent Pre-Launch QA Checklist:\s*launch-house\.uk/checklist\s*</p>',
+                (
+                    f'<div style="margin:14px 0 8px;">'
+                    f'<a href="{_checklist_link}" '
+                    f'style="display:inline-block;padding:8px 13px;border-radius:6px;'
+                    f'background:#1c8ed4;color:#ffffff;text-decoration:none;font-weight:600;'
+                    f'font-size:11px;line-height:1.2;">'
+                    f'Download the Cvent Pre-Launch QA Checklist</a></div>'
+                ),
+                _rendered_html,
+                flags=_re.I,
+            )
+            message.body_html = _rendered_html
+
+            _rendered_plain = render_email_plain(
                 body_text=body["body_text"],
                 sender_name=sender_name,
                 sender_site_url=sender_site_url,
-                sender_calendar_link=sender_calendar_link,
+                sender_phone="+1 (571) 444-8523",
+                sender_email="sam@launchhouse.events",
             )
+            # Replace checklist arrow line with short-link fallback in plain text
+            _rendered_plain = _re.sub(
+                r"(?im)^\s*Cvent Pre-Launch QA Checklist\s*[\-\u2192]*>\s*.+$",
+                f"Download the Cvent Pre-Launch QA Checklist: {_checklist_display}",
+                _rendered_plain,
+            )
+            message.body_text = _rendered_plain
         except Exception:
             # Fallback: minimal safe HTML
             import html as _html

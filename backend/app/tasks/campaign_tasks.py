@@ -215,6 +215,7 @@ async def _process_campaign_lead_async(campaign_lead_id: str):
                     "sender_first_name": _settings.sender_first_name,
                     "sender_last_name": "",
                     "sender_email": sender.email,
+                    "sender_display_name": sender.display_name or "",
                     "sender_calendar_link": _settings.sender_calendar_link or "",
                     "company_site_url": _settings.company_site_url,
                 }
@@ -282,7 +283,6 @@ async def _process_campaign_lead_async(campaign_lead_id: str):
                         body_text=_body,
                         sender_name="Sameera Gurung",
                         sender_site_url=sender_info.get("company_site_url", "https://launchhouse.events/"),
-                        sender_calendar_link=sender_info.get("sender_calendar_link") or "",
                         sender_phone="+1 (571) 444-8523",
                         sender_email="sam@launchhouse.events",
                     )
@@ -305,7 +305,7 @@ async def _process_campaign_lead_async(campaign_lead_id: str):
                 step_config=step,
                 lead_data=str(lead_data) if lead_data else None,
                 research_data=research_data,
-                sender_info=str(sender_info) if sender_info else None,
+                sender_info=sender_info,
                 previous_email_subject=previous_email_subject,
                 previous_email_body=previous_email_body,
                 reply_intent=reply_intent,

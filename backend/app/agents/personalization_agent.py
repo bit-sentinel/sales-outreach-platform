@@ -18,6 +18,27 @@ from pydantic import BaseModel, Field
 
 from app.agents.base import BaseAgent
 
+# Known email → full name mappings (for accounts where username != display name)
+_SENDER_NAME_MAP: dict[str, str] = {
+    "sam@launchhouse.events": "Sameera Gurung",
+    "sam@launchhouse.in": "Sameera Gurung",
+}
+
+
+def _resolve_sender_name(email: str, display_name: str = "") -> str:
+    """Return the display name for a sender email address.
+
+    Priority: known map → SenderAccount.display_name → capitalize username.
+    e.g. sneha@launchhouse.in → "Sneha", john.smith@x.com → "John Smith"
+    """
+    e = (email or "").lower().strip()
+    if e in _SENDER_NAME_MAP:
+        return _SENDER_NAME_MAP[e]
+    if display_name:
+        return display_name
+    username = e.split("@")[0]
+    return " ".join(part.capitalize() for part in re.split(r"[._\-]", username)) or "Sameera Gurung"
+
 
 class EmailOutput(BaseModel):
     subject: str = Field(description="Email subject line, under 8 words")
@@ -296,6 +317,8 @@ Do not fill in a template — write original prose using the signals from the le
                 or "https://launch-house.uk/checklist"
             )
             _sender_cal = _sender.get("calendar_link") or _sender.get("sender_calendar_link") or ""
+            _sender_email = _sender.get("sender_email") or "sam@launchhouse.events"
+            _sender_name = _resolve_sender_name(_sender_email, _sender.get("sender_display_name", ""))
 
             if "{{checklist_link}}" in raw_body:
                 raw_body = raw_body.replace("{{checklist_link}}", _checklist_link)
@@ -314,18 +337,18 @@ Do not fill in a template — write original prose using the signals from the le
             raw_body_plain = _cta_line_re.sub(_cta_plain, raw_body)
             raw_body_html = _cta_line_re.sub(_cta_button, raw_body)
 
-            # Same template for every email — no compact/seniority variations
+            # Same template for every email — compact signature (no calendar button)
             branded_html = render_email_html(
                 body_text=raw_body_html,
-                sender_name="Sameera Gurung",
+                sender_name=_sender_name,
                 sender_company="LaunchHouse Events",
                 sender_role="Cvent Registration & Event Technology Operations",
                 sender_site_url="https://launchhouse.events/",
                 sender_calendar_link=_sender_cal,
                 sender_phone="+1 (571) 444-8523",
-                sender_email="sam@launchhouse.events",
+                sender_email=_sender_email,
                 header_style=HeaderStyle.SLIM,
-                compact_signature=False,
+                compact_signature=True,
             )
             branded_html = re.sub(
                 r'<p[^>]*>\s*Download the Cvent Pre-Launch QA Checklist:\s*<a href="([^"]+)"[^>]*>[^<]+</a>\s*</p>',
@@ -342,11 +365,10 @@ Do not fill in a template — write original prose using the signals from the le
             )
             plain_text = render_email_plain(
                 body_text=raw_body_plain,
-                sender_name="Sameera Gurung",
+                sender_name=_sender_name,
                 sender_site_url="https://launchhouse.events/",
-                sender_calendar_link=_sender_cal,
                 sender_phone="+1 (571) 444-8523",
-                sender_email="sam@launchhouse.events",
+                sender_email=_sender_email,
             )
             parsed["body_html"] = branded_html
             parsed["body_text"] = plain_text

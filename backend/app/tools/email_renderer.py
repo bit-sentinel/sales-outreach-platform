@@ -214,9 +214,11 @@ def _signature_block(
     sender_role: str,
     sender_site_url: str,
     sender_calendar_link: str,
+    sender_phone: str = "",
+    sender_email: str = "",
     compact: bool = False,
 ) -> str:
-    """5-line standard or 3-line compact signature."""
+    """5-line standard or 3-line compact signature with optional phone and email."""
     name_h = html.escape(sender_name)
     company_h = html.escape(sender_company)
     role_h = html.escape(sender_role)
@@ -226,13 +228,13 @@ def _signature_block(
                else DEFAULT_CALENDAR_LINK)
 
     # Display-friendly versions
-    site_display = site_url.rstrip("/")
-    # Show friendly label for long calendar URLs
-    cal_display = (
-        "Book a meeting →"
-        if "calendar.google.com" in cal_url or len(cal_url) > 60
-        else re.sub(r"^https?://", "", cal_url)
-    )
+    site_display = re.sub(r"^https?://", "", site_url).rstrip("/")
+    # Phone, website, and email display with emoji icons and pipe separators
+    email_suffix = f'&nbsp;<span style="color:{MUTED_TEXT};">|</span>&nbsp;<span style="color:{DEFAULT_TEXT};font-size:14px;margin-right:4px;">📧</span><a href="mailto:{html.escape(sender_email)}" style="color:{DEFAULT_TEXT};text-decoration:none;font-size:14px;">{html.escape(sender_email)}</a>' if sender_email else ""
+    if sender_phone:
+        phone_display = f'<span style="color:{DEFAULT_TEXT};font-size:14px;margin-right:4px;">📞</span><span style="color:{DEFAULT_TEXT};font-size:14px;margin-right:12px;">{html.escape(sender_phone)}</span><span style="color:{MUTED_TEXT};">|</span>&nbsp;<span style="color:{DEFAULT_TEXT};font-size:14px;margin-right:4px;">🌐</span>'
+    else:
+        phone_display = f'<span style="color:{DEFAULT_TEXT};font-size:14px;margin-right:4px;">🌐</span>'
 
     link_style = f"color:{BLUE};text-decoration:underline;font-weight:500;font-family:Arial,Helvetica,sans-serif;font-size:14px;"
     base_style = f"font-family:Arial,Helvetica,sans-serif;line-height:22px;"
@@ -245,6 +247,7 @@ def _signature_block(
       <div style="font-size:15px;font-weight:600;color:{DEFAULT_TEXT};margin-top:4px;">{name_h}</div>
       <div style="font-size:14px;font-weight:500;color:{DEFAULT_TEXT};">{company_h}</div>
       <div style="font-size:13px;color:{MUTED_TEXT};">{role_h}</div>
+      <div style="margin-top:4px;font-size:14px;display:flex;align-items:center;">{phone_display}<a href="{site_url}" style="{link_style}">{site_display}</a>{email_suffix}</div>
     </div>"""
 
     calendar_btn = ""
@@ -283,7 +286,7 @@ def _signature_block(
       <div style="font-size:15px;font-weight:600;color:{DEFAULT_TEXT};margin-top:4px;">{name_h}</div>
       <div style="font-size:14px;font-weight:500;color:{DEFAULT_TEXT};">{company_h}</div>
       <div style="font-size:13px;color:{MUTED_TEXT};">{role_h}</div>
-      <div style="margin-top:4px;"><a href="{site_url}" style="{link_style}">{site_display}</a></div>
+      <div style="margin-top:4px;font-size:14px;display:flex;align-items:center;">{phone_display}<a href="{site_url}" style="{link_style}">{site_display}</a>{email_suffix}</div>
 {calendar_btn}
     </div>"""
 
@@ -343,6 +346,8 @@ def render_email_html(
     sender_role: str = "Cvent Registration & Event Technology Operations",
     sender_site_url: str = "https://launchhouse.events/",
     sender_calendar_link: str = DEFAULT_CALENDAR_LINK,
+    sender_phone: str = "",
+    sender_email: str = "",
     header_style: HeaderStyle | str = HeaderStyle.SLIM,
     compact_signature: bool = False,
 ) -> str:
@@ -357,6 +362,8 @@ def render_email_html(
         sender_role:        Sender's role line in signature
         sender_site_url:    Company website URL (shown in signature + footer)
         sender_calendar_link: Scheduling link (shown in signature when provided)
+        sender_phone:       Phone number to display in signature (e.g. "+1 (571) 444-8523")
+        sender_email:       Email address to display in signature (e.g. "sam@launchhouse.events")
         header_style:       "slim" (60px blue bar) or "premium" (128px with tagline)
         compact_signature:  Use 3-line compact signature (for Director/VP recipients)
 
@@ -373,6 +380,8 @@ def render_email_html(
         sender_role=sender_role,
         sender_site_url=sender_site_url,
         sender_calendar_link=sender_calendar_link,
+        sender_phone=sender_phone,
+        sender_email=sender_email,
         compact=compact_signature,
     )
     footer_html = _footer_block(site_url=sender_site_url)
@@ -452,7 +461,8 @@ def render_email_plain(
     body_text: str,
     sender_name: str = "LaunchHouse Team",
     sender_site_url: str = "https://launchhouse.events/",
-    sender_calendar_link: str = DEFAULT_CALENDAR_LINK,
+    sender_phone: str = "",
+    sender_email: str = "",
 ) -> str:
     """
     Return a clean plain-text version of the email (for multipart/alternative).
@@ -465,14 +475,13 @@ def render_email_plain(
     # Strip LLM-appended signature
     clean = _strip_llm_signature(clean)
 
-    cal_url = (sender_calendar_link
-               if sender_calendar_link and sender_calendar_link not in ("", "#")
-               else DEFAULT_CALENDAR_LINK)
-    cal_display = (
-        "Book a meeting: " + cal_url
-        if "calendar.google.com" in cal_url or len(cal_url) > 60
-        else re.sub(r"^https?://", "", cal_url)
-    )
+    # Phone | website | email on one line — no calendar URL line
+    if sender_phone:
+        site_line = f"📞 {sender_phone} | 🌐 {re.sub(r'^https?://', '', sender_site_url).rstrip('/')}"
+    else:
+        site_line = f"🌐 {re.sub(r'^https?://', '', sender_site_url).rstrip('/')}"
+    if sender_email:
+        site_line += f" | 📧 {sender_email}"
 
     sig_lines = [
         "Best,",
@@ -480,8 +489,7 @@ def render_email_plain(
         sender_name,
         "LaunchHouse Events",
         "Cvent Registration & Event Technology Operations",
-        cal_display,
-        re.sub(r"^https?://", "", sender_site_url).rstrip("/"),
+        site_line,
     ]
     sig = "\n".join(sig_lines)
 
