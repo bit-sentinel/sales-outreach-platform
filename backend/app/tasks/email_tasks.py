@@ -26,7 +26,22 @@ def _make_session_factory():
 
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=60)
 def send_email(self, message_id: str):
-    """Send a single email via the configured provider."""
+    """Send a single email via the configured provider.
+
+    Waits a random 5-10 minute delay before sending to mimic human pacing
+    and avoid triggering spam filters on burst sends.
+    """
+    import random
+    import time
+
+    delay_seconds = random.randint(5, 10) * 60
+    logger.info(
+        "send_email: queued message %s — waiting %d min before sending",
+        message_id,
+        delay_seconds // 60,
+    )
+    time.sleep(delay_seconds)
+
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
