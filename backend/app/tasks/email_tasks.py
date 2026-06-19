@@ -24,6 +24,41 @@ def _make_session_factory():
     return async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
+def _check_message_test_mode(message_id: str) -> bool:
+    """Synchronous check: return True if the message belongs to a test-mode campaign."""
+    try:
+        import asyncio, uuid
+        from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+        from sqlalchemy import select
+        from app.config import get_settings
+        from app.models.campaign import Message, Campaign
+
+        async def _check():
+            settings = get_settings()
+            engine = create_async_engine(str(settings.database_url), pool_size=2)
+            factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+            async with factory() as db:
+                msg = (await db.execute(
+                    select(Message).where(Message.id == uuid.UUID(message_id))
+                )).scalar_one_or_none()
+                if not msg or not msg.campaign_id:
+                    return False
+                campaign = (await db.execute(
+                    select(Campaign).where(Campaign.id == msg.campaign_id)
+                )).scalar_one_or_none()
+                if not campaign:
+                    return False
+                return bool((campaign.settings or {}).get("test_mode_snapshot", {}).get("enabled", False))
+
+        loop = asyncio.new_event_loop()
+        try:
+            return loop.run_until_complete(_check())
+        finally:
+            loop.close()
+    except Exception:
+        return False
+
+
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=60)
 def send_email(self, message_id: str):
     """Send a single email via the configured provider.
@@ -34,13 +69,18 @@ def send_email(self, message_id: str):
     import random
     import time
 
-    delay_seconds = random.randint(5, 10) * 60
-    logger.info(
-        "send_email: queued message %s — waiting %d min before sending",
-        message_id,
-        delay_seconds // 60,
-    )
-    time.sleep(delay_seconds)
+    # Skip the pacing delay when the campaign is in test mode (instant delivery for testing)
+    _is_test = _check_message_test_mode(message_id)
+    if _is_test:
+        logger.info("send_email: test mode — skipping pacing delay for message %s", message_id)
+    else:
+        delay_seconds = random.randint(5, 10) * 60
+        logger.info(
+            "send_email: queued message %s — waiting %d min before sending",
+            message_id,
+            delay_seconds // 60,
+        )
+        time.sleep(delay_seconds)
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -483,6 +523,7 @@ async def _check_replies_async():
                         is_read=False,
                     )
                     db.add(reply)
+                    await db.flush()  # get reply.id before dispatching task
 
                     if orig_message.campaign_id:
                         await db.execute(
@@ -490,6 +531,15 @@ async def _check_replies_async():
                             .where(Campaign.id == orig_message.campaign_id)
                             .values(reply_count=Campaign.reply_count + 1)
                         )
+
+                    # Gap 2: auto-draft a polished response for interested/meeting replies
+                    if intent in ("interested", "meeting_request", "question"):
+                        try:
+                            from app.tasks.orchestrator_tasks import draft_reply_response
+                            draft_reply_response.apply_async(args=[str(reply.id)], countdown=30)
+                            logger.info("check_replies: queued reply-response draft for reply %s (intent=%s)", reply.id, intent)
+                        except Exception as _gap2_err:
+                            logger.warning("check_replies: Gap 2 dispatch failed (non-fatal): %s", _gap2_err)
 
                     ingested_nums.append(num)
                     logger.info("check_replies: [%s] ingested reply from %s re '%s'", imap_user, from_email, bare)

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { User, Mail, Users, Sparkles, Key, Plus, Eye, EyeOff, AlertCircle, Trash2, Activity, Upload, Zap, Play, Pause, RotateCcw, UserPlus, RefreshCw, Loader2, FlaskConical } from 'lucide-react';
+import { User, Mail, Users, Sparkles, Key, Plus, Eye, EyeOff, AlertCircle, Trash2, Activity, Upload, Zap, Play, Pause, RotateCcw, UserPlus, RefreshCw, Loader2, FlaskConical, Bot, CheckCircle, XCircle, Clock, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/stores/auth-store';
@@ -13,6 +13,7 @@ const TABS = [
   { id: 'team', label: 'Team', icon: Users },
   { id: 'ai', label: 'AI Config', icon: Sparkles },
   { id: 'api', label: 'API Keys', icon: Key },
+  { id: 'automation', label: 'Automation', icon: Bot },
   { id: 'testmode', label: 'Test Mode', icon: FlaskConical },
   { id: 'activity', label: 'Activity Log', icon: Activity },
 ];
@@ -830,6 +831,282 @@ function APITab() {
   );
 }
 
+// ── Automation Tab ────────────────────────────────────────────────────────────
+
+type HealthAlertItem = {
+  id: string;
+  component: string;
+  severity: string;
+  message: string;
+  alerted_at: string;
+};
+
+type AutomationConfig = {
+  loop_enabled: boolean;
+  max_leads_per_run: number;
+  max_emails_per_account_daily: number;
+  alert_emails: string;
+  last_run_at: string | null;
+  last_run_summary: Record<string, unknown> | null;
+  latest_insight: { summary: string; created_at: string } | null;
+  health_alerts: HealthAlertItem[];
+};
+
+function AutomationTab() {
+  const [config, setConfig] = useState<AutomationConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [running, setRunning] = useState(false);
+  const [checking, setChecking] = useState(false);
+
+  const [maxLeads, setMaxLeads] = useState(10);
+  const [maxPerAccount, setMaxPerAccount] = useState(15);
+  const [alertEmails, setAlertEmails] = useState('snehdeep@launchhouse.events,cto@launchhouse.events');
+
+  async function load() {
+    setLoading(true);
+    try {
+      const data = await api<AutomationConfig>({ method: 'GET', url: '/admin/automation-config' });
+      setConfig(data);
+      setMaxLeads(data.max_leads_per_run);
+      setMaxPerAccount(data.max_emails_per_account_daily);
+      setAlertEmails(data.alert_emails);
+    } catch { setConfig(null); }
+    finally { setLoading(false); }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function toggleLoop() {
+    if (!config) return;
+    setToggling(true);
+    try {
+      await api({ method: 'PATCH', url: '/admin/automation-config', data: { loop_enabled: !config.loop_enabled } });
+      setConfig(c => c ? { ...c, loop_enabled: !c.loop_enabled } : c);
+    } catch {} finally { setToggling(false); }
+  }
+
+  async function saveConfig() {
+    setSaving(true); setMsg(null);
+    try {
+      await api({ method: 'PATCH', url: '/admin/automation-config', data: {
+        max_leads_per_run: maxLeads,
+        max_emails_per_account_daily: maxPerAccount,
+        alert_emails: alertEmails,
+      }});
+      setMsg({ ok: true, text: 'Automation settings saved.' });
+    } catch {
+      setMsg({ ok: false, text: 'Failed to save.' });
+    } finally { setSaving(false); }
+  }
+
+  async function runNow() {
+    setRunning(true);
+    try {
+      await api({ method: 'POST', url: '/admin/automation/run-now' });
+      setMsg({ ok: true, text: 'Loop queued — check back in a few minutes.' });
+    } catch {
+      setMsg({ ok: false, text: 'Failed to queue run.' });
+    } finally { setRunning(false); }
+  }
+
+  async function healthCheck() {
+    setChecking(true);
+    try {
+      await api({ method: 'POST', url: '/admin/automation/health-check' });
+      setMsg({ ok: true, text: 'Health check queued.' });
+    } catch {} finally { setChecking(false); }
+  }
+
+  async function resolveAlert(id: string) {
+    await api({ method: 'DELETE', url: `/admin/automation/alerts/${id}` });
+    setConfig(c => c ? { ...c, health_alerts: c.health_alerts.filter(a => a.id !== id) } : c);
+  }
+
+  const inputCls = 'w-full rounded-xl border border-white/[0.1] bg-white/[0.05] px-3 py-2 text-sm text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition';
+
+  if (loading) return <div className="flex justify-center py-16"><Loader2 className="h-5 w-5 animate-spin text-white/30" /></div>;
+
+  return (
+    <div className="space-y-5">
+      {/* ── Master toggle ── */}
+      <div className="glass-card rounded-[24px] p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Bot className="h-4 w-4 text-indigo-400" />
+              E2E Automation Loop
+              {config?.loop_enabled && (
+                <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/20">ACTIVE</span>
+              )}
+            </h3>
+            <p className="text-xs text-white/40 mt-1 max-w-lg">
+              When enabled, the AI loop runs every weekday at 9 AM ET. It selects leads, creates campaigns,
+              generates and reviews emails, then sends them like a seasoned outreach specialist. It observes
+              patterns, avoids past mistakes, and improves strategy over time.
+            </p>
+          </div>
+          <button
+            onClick={toggleLoop}
+            disabled={toggling}
+            className={cn(
+              'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-50',
+              config?.loop_enabled ? 'bg-emerald-500' : 'bg-white/10'
+            )}
+          >
+            <span className={cn(
+              'inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200',
+              config?.loop_enabled ? 'translate-x-5' : 'translate-x-0'
+            )} />
+          </button>
+        </div>
+
+        {config?.loop_enabled && (
+          <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
+            <p className="text-xs text-emerald-300/80">
+              <span className="font-semibold">Automation is ON.</span> The loop will run Mon–Thu at 9 AM ET,
+              select up to <span className="font-semibold">{config.max_leads_per_run} leads</span>, and use
+              up to <span className="font-semibold">{config.max_emails_per_account_daily} sends/account/day</span>.
+              Alerts go to: {config.alert_emails}.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* ── Configuration ── */}
+      <div className="glass-card rounded-[24px] p-5">
+        <SectionHeader title="Loop settings" description="Control how aggressively the loop operates" />
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="flex justify-between mb-1.5">
+                <label className="text-xs font-medium text-white/50">Leads per run</label>
+                <span className="text-xs text-white/40">{maxLeads} leads</span>
+              </div>
+              <input type="range" min="1" max="20" value={maxLeads} onChange={e => setMaxLeads(Number(e.target.value))} className="w-full accent-indigo-500" />
+              <div className="flex justify-between text-[10px] text-white/25 mt-0.5"><span>1</span><span>20</span></div>
+            </div>
+            <div>
+              <div className="flex justify-between mb-1.5">
+                <label className="text-xs font-medium text-white/50">Max sends per inbox/day</label>
+                <span className="text-xs text-white/40">{maxPerAccount}/day</span>
+              </div>
+              <input type="range" min="5" max="30" value={maxPerAccount} onChange={e => setMaxPerAccount(Number(e.target.value))} className="w-full accent-indigo-500" />
+              <div className="flex justify-between text-[10px] text-white/25 mt-0.5"><span>5</span><span>30</span></div>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-white/50 mb-1.5">Alert recipients <span className="text-white/25">(comma-separated)</span></label>
+            <input className={inputCls} value={alertEmails} onChange={e => setAlertEmails(e.target.value)} placeholder="email1@co.com,email2@co.com" />
+          </div>
+        </div>
+        {msg && <p className={cn('mt-3 text-xs font-medium', msg.ok ? 'text-emerald-400' : 'text-rose-400')}>{msg.text}</p>}
+        <div className="mt-4 flex gap-2 justify-end">
+          <button onClick={saveConfig} disabled={saving} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50 transition shadow-lg shadow-indigo-900/40">
+            {saving && <Loader2 className="h-3 w-3 animate-spin" />} Save settings
+          </button>
+        </div>
+      </div>
+
+      {/* ── Last Run Status ── */}
+      {config?.last_run_summary && (
+        <div className="glass-card rounded-[24px] p-5">
+          <SectionHeader title="Last run" description={config.last_run_at ? `Ran ${new Date(config.last_run_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}` : 'Never run'} />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              { label: 'Candidates evaluated', value: config.last_run_summary.candidates_evaluated },
+              { label: 'Leads selected', value: config.last_run_summary.leads_selected },
+              { label: 'Campaigns created', value: config.last_run_summary.campaigns_created },
+              { label: 'Emails queued', value: config.last_run_summary.emails_queued },
+            ].map(({ label, value }) => (
+              <div key={label} className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-center">
+                <p className="text-2xl font-bold text-white">{String(value ?? 0)}</p>
+                <p className="text-[11px] text-white/40 mt-0.5">{label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Strategy Insights (Gap 3) ── */}
+      {config?.latest_insight && (
+        <div className="glass-card rounded-[24px] p-5">
+          <SectionHeader
+            title="Latest strategy insight"
+            description={`From weekly analysis — ${new Date(config.latest_insight.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+          />
+          <p className="text-sm text-white/70 leading-relaxed">{config.latest_insight.summary}</p>
+        </div>
+      )}
+
+      {/* ── Health Alerts ── */}
+      {(config?.health_alerts?.length ?? 0) > 0 && (
+        <div className="glass-card rounded-[24px] border-rose-500/20 p-5">
+          <SectionHeader title="System alerts" description="Unresolved issues detected by the health monitor" />
+          <div className="space-y-2">
+            {config!.health_alerts.map(alert => (
+              <div key={alert.id} className={cn(
+                'flex items-start gap-3 rounded-xl border px-4 py-3',
+                alert.severity === 'critical' ? 'border-rose-500/30 bg-rose-500/10' : 'border-amber-500/20 bg-amber-500/10'
+              )}>
+                {alert.severity === 'critical'
+                  ? <XCircle className="h-4 w-4 text-rose-400 flex-shrink-0 mt-0.5" />
+                  : <AlertCircle className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                }
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-white uppercase tracking-wide">{alert.component}</p>
+                  <p className="text-xs text-white/60 mt-0.5">{alert.message}</p>
+                </div>
+                <button onClick={() => resolveAlert(alert.id)} className="text-white/30 hover:text-white/60 transition-colors flex-shrink-0 text-xs">Dismiss</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Manual Controls ── */}
+      <div className="glass-card rounded-[24px] p-5">
+        <SectionHeader title="Manual controls" description="Trigger the loop or a health check outside the schedule" />
+        <div className="flex gap-3">
+          <button onClick={runNow} disabled={running} className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50 transition shadow-lg shadow-indigo-900/30">
+            {running ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bot className="h-3.5 w-3.5" />}
+            {running ? 'Queuing…' : 'Run loop now'}
+          </button>
+          <button onClick={healthCheck} disabled={checking} className="flex items-center gap-2 rounded-xl border border-white/[0.1] px-4 py-2 text-xs font-medium text-white/60 hover:bg-white/[0.05] transition">
+            {checking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
+            {checking ? 'Queuing…' : 'Run health check'}
+          </button>
+        </div>
+      </div>
+
+      {/* ── How it works ── */}
+      <div className="glass-card rounded-[24px] p-5">
+        <h3 className="text-sm font-semibold text-white mb-4">How the loop works</h3>
+        <div className="space-y-3">
+          {[
+            { step: '1', label: 'Lead selection', desc: 'AI scores up to 100 candidates by signal strength, profile fit, and recency — picks the best N.' },
+            { step: '2', label: 'Campaign planning', desc: 'For each lead, the AI decides on 2–4 email steps and which angle (save time / add capacity / save money) to use at each step.' },
+            { step: '3', label: 'Email generation + QA', desc: 'PersonalizationAgent writes each step-1 email. OrchestratorAgent reviews it (0–100 score). Below 70 = rewrite with specific feedback (up to 2 retries).' },
+            { step: '4', label: 'Smart scheduling', desc: 'Sends are scheduled Mon–Thu, 10 AM–4 PM UTC with 30–90 min jitter. Each inbox is capped at your configured daily limit.' },
+            { step: '5', label: 'Reply drafting (Gap 2)', desc: 'When a lead replies with interest, the AI immediately drafts a polished response for your one-click approval in the Replies page.' },
+            { step: '6', label: 'Performance analysis (Gap 3)', desc: 'Every Monday the AI analyses 30 days of data — open rates, reply rates by angle and industry — and adjusts future strategy. You get a digest email.' },
+          ].map(({ step, label, desc }) => (
+            <div key={step} className="flex items-start gap-3">
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-[10px] font-bold text-indigo-400">{step}</span>
+              <div>
+                <p className="text-xs font-semibold text-white">{label}</p>
+                <p className="text-xs text-white/40 mt-0.5 leading-5">{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Test Mode Tab ─────────────────────────────────────────────────────────────
 
 type TestEmail = { id: string; email: string; label: string; enabled: boolean };
@@ -1232,6 +1509,7 @@ export default function SettingsPage() {
       case 'team': return <TeamTab />;
       case 'ai': return <AITab />;
       case 'api': return <APITab />;
+      case 'automation': return <AutomationTab />;
       case 'testmode': return <TestModeTab />;
       case 'activity': return <ActivityTab />;
       default: return null;

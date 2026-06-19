@@ -704,3 +704,149 @@ async def list_activity(
         }
         for r in rows
     ])
+
+
+# ── Automation Config ─────────────────────────────────────────────────────────
+
+class AutomationConfigUpdate(BaseModel):
+    loop_enabled: bool | None = None
+    max_leads_per_run: int | None = Field(default=None, ge=1, le=50)
+    max_emails_per_account_daily: int | None = Field(default=None, ge=1, le=50)
+    alert_emails: str | None = None
+
+
+@router.get("/automation-config")
+async def get_automation_config(
+    current_user=Depends(get_current_user),
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.models.automation import AutomationConfig, StrategyInsight, HealthAlert
+
+    cfg = (await db.execute(
+        select(AutomationConfig)
+        .where(AutomationConfig.tenant_id == tenant_id)
+        .order_by(AutomationConfig.created_at)
+        .limit(1)
+    )).scalar_one_or_none()
+
+    # Fetch latest strategy insight summary
+    latest_insight = (await db.execute(
+        select(StrategyInsight)
+        .where(
+            StrategyInsight.tenant_id == tenant_id,
+            StrategyInsight.insight_type == "weekly_summary",
+        )
+        .order_by(StrategyInsight.created_at.desc())
+        .limit(1)
+    )).scalar_one_or_none()
+
+    # Fetch unresolved health alerts
+    open_alerts = (await db.execute(
+        select(HealthAlert)
+        .where(HealthAlert.tenant_id == tenant_id, HealthAlert.resolved == False)
+        .order_by(HealthAlert.alerted_at.desc())
+        .limit(10)
+    )).scalars().all()
+
+    config_data = {
+        "loop_enabled": cfg.loop_enabled if cfg else False,
+        "max_leads_per_run": cfg.max_leads_per_run if cfg else 10,
+        "max_emails_per_account_daily": cfg.max_emails_per_account_daily if cfg else 15,
+        "alert_emails": cfg.alert_emails if cfg else "snehdeep@launchhouse.events,cto@launchhouse.events",
+        "last_run_at": cfg.last_run_at.isoformat() if cfg and cfg.last_run_at else None,
+        "last_run_summary": cfg.last_run_summary if cfg else None,
+        "latest_insight": {
+            "summary": latest_insight.summary_text,
+            "created_at": latest_insight.created_at.isoformat(),
+        } if latest_insight else None,
+        "health_alerts": [
+            {
+                "id": str(a.id),
+                "component": a.component,
+                "severity": a.severity,
+                "message": a.message,
+                "alerted_at": a.alerted_at.isoformat(),
+            }
+            for a in open_alerts
+        ],
+    }
+    return APIResponse(data=config_data)
+
+
+@router.patch("/automation-config")
+async def update_automation_config(
+    body: AutomationConfigUpdate,
+    current_user=Depends(get_current_user),
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.models.automation import AutomationConfig
+
+    cfg = (await db.execute(
+        select(AutomationConfig)
+        .where(AutomationConfig.tenant_id == tenant_id)
+        .limit(1)
+    )).scalar_one_or_none()
+
+    if not cfg:
+        cfg = AutomationConfig(
+            id=uuid.uuid4(),
+            tenant_id=tenant_id,
+            created_by=current_user.id,
+        )
+        db.add(cfg)
+
+    if body.loop_enabled is not None:
+        cfg.loop_enabled = body.loop_enabled
+    if body.max_leads_per_run is not None:
+        cfg.max_leads_per_run = body.max_leads_per_run
+    if body.max_emails_per_account_daily is not None:
+        cfg.max_emails_per_account_daily = body.max_emails_per_account_daily
+    if body.alert_emails is not None:
+        cfg.alert_emails = body.alert_emails
+
+    await db.commit()
+    return APIResponse(data={"loop_enabled": cfg.loop_enabled, "updated": True})
+
+
+@router.post("/automation/run-now")
+async def trigger_automation_run(
+    current_user=Depends(get_current_user),
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Manually trigger the automation loop (ignores day/time guard)."""
+    from app.tasks.orchestrator_tasks import run_automation_loop
+    task = run_automation_loop.apply_async(countdown=5)
+    return APIResponse(data={"queued": True, "task_id": task.id})
+
+
+@router.post("/automation/health-check")
+async def trigger_health_check(
+    current_user=Depends(get_current_user),
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+):
+    """Manually trigger a health check."""
+    from app.tasks.orchestrator_tasks import run_health_monitor
+    task = run_health_monitor.apply_async(countdown=5)
+    return APIResponse(data={"queued": True, "task_id": task.id})
+
+
+@router.delete("/automation/alerts/{alert_id}", status_code=204)
+async def resolve_health_alert(
+    alert_id: uuid.UUID,
+    current_user=Depends(get_current_user),
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    db: AsyncSession = Depends(get_db),
+):
+    from datetime import datetime, timezone
+    from app.models.automation import HealthAlert
+    from sqlalchemy import update as sql_update_alert
+
+    await db.execute(
+        sql_update_alert(HealthAlert)
+        .where(HealthAlert.id == alert_id, HealthAlert.tenant_id == tenant_id)
+        .values(resolved=True, resolved_at=datetime.now(timezone.utc))
+    )
+    await db.commit()

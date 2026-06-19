@@ -41,6 +41,11 @@ from app.models.event_intelligence import (
     SignalEvidence,
     LeadScoreBreakdown,
 )
+from app.models.automation import (
+    AutomationConfig,
+    StrategyInsight,
+    HealthAlert,
+)
 
 __all__ = [
     "Tenant",
@@ -76,4 +81,7 @@ __all__ = [
     "BuyingIntentSignal",
     "SignalEvidence",
     "LeadScoreBreakdown",
+    "AutomationConfig",
+    "StrategyInsight",
+    "HealthAlert",
 ]

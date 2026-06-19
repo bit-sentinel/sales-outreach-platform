@@ -343,6 +343,14 @@ class PersonalizationAgent(BaseAgent):
         step_num = step_config.get("step", 1) if step_config else 1
         context = "\n\n".join(context_parts) if context_parts else "Limited data available — use best inference."
 
+        rewrite_notes = (step_config or {}).get("rewrite_notes", "")
+        strategy_notes = (step_config or {}).get("strategy_notes", "")
+        extra_instructions = ""
+        if rewrite_notes:
+            extra_instructions += f"\n\n**REWRITE NOTES (from QA review — fix these specific issues):**\n{rewrite_notes}"
+        if strategy_notes:
+            extra_instructions += f"\n\n**STRATEGY CONTEXT (from performance analysis — apply these learnings):**\n{strategy_notes}"
+
         messages = [
             SystemMessage(content=PERSONALIZATION_SYSTEM_PROMPT),
             HumanMessage(content=f"""
@@ -356,6 +364,7 @@ Do not fill in a template — write original prose using the signals from the le
 
 **Copywriting Framework:**
 {COPYWRITING_FRAMEWORK}
+{extra_instructions}
 
 {parser.get_format_instructions()}
 """),
