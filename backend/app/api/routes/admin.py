@@ -818,7 +818,7 @@ async def trigger_automation_run(
 ):
     """Manually trigger the automation loop (ignores day/time guard)."""
     from app.tasks.orchestrator_tasks import run_automation_loop
-    task = run_automation_loop.apply_async(countdown=5)
+    task = run_automation_loop.apply_async(args=[], kwargs={"force": True}, countdown=5)
     return APIResponse(data={"queued": True, "task_id": task.id})
 
 

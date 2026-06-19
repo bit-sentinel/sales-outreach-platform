@@ -51,16 +51,16 @@ def _is_valid_send_window() -> bool:
 # ── Main Loop ────────────────────────────────────────────────────────────────
 
 @celery_app.task(bind=True, max_retries=1, default_retry_delay=300, name="app.tasks.orchestrator_tasks.run_automation_loop")
-def run_automation_loop(self):
+def run_automation_loop(self, force: bool = False):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        loop.run_until_complete(_run_automation_loop_async())
+        loop.run_until_complete(_run_automation_loop_async(force=force))
     finally:
         loop.close()
 
 
-async def _run_automation_loop_async():
+async def _run_automation_loop_async(force: bool = False):
     from sqlalchemy import select, update, func as sqlfunc
     from app.models.automation import AutomationConfig
     from app.models.campaign import Campaign, CampaignLead, Message, SenderAccount
@@ -80,7 +80,7 @@ async def _run_automation_loop_async():
             select(AutomationConfig).order_by(AutomationConfig.created_at).limit(1)
         )).scalar_one_or_none()
 
-        if not cfg_row or not cfg_row.loop_enabled:
+        if not cfg_row or (not cfg_row.loop_enabled and not force):
             logger.info("automation_loop: disabled — skipping")
             return
 
