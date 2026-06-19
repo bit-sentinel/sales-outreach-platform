@@ -371,6 +371,10 @@ async def _run_automation_loop_async(force: bool = False):
                 await db.flush()
 
                 # ── 7e. Create campaign lead ───────────────────────────────────
+                cl_personalization: dict = {}
+                if test_mode_active and test_mode_emails:
+                    cl_personalization["test_email_override"] = test_mode_emails[0]["email"]
+
                 cl = CampaignLead(
                     id=uuid.uuid4(),
                     tenant_id=lead.tenant_id,
@@ -378,6 +382,7 @@ async def _run_automation_loop_async(force: bool = False):
                     lead_id=lead.id,
                     status="active",
                     current_step=0,
+                    personalization_data=cl_personalization or None,
                 )
                 db.add(cl)
                 await db.flush()
