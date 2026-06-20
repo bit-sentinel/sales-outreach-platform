@@ -333,14 +333,29 @@ async def _run_automation_loop_async(force: bool = False):
             for s in steps
         ]
 
-        # ── 7a. Build campaign name: Loop-<short desc>-<YYYY-MM-DD> ──────────
-        date_str = now_utc.strftime("%Y-%m-%d")
-        industry = ""
-        if top_company and top_company.industry:
-            industry = top_company.industry.split("/")[0].strip()[:25]
-        angle_label = top_angle.replace("_", " ").title()
-        short_desc = f"{industry} {angle_label}".strip() if industry else angle_label
-        campaign_name = f"Loop-{short_desc}-{date_str}"
+        # ── 7a. Build campaign name: Loop_<short desc>_<DD-Mon-YYYY> ───────
+        import re as _re
+        date_str = now_utc.strftime("%d-%b-%Y")  # e.g. 20-Jun-2026
+
+        # Derive short_desc from plan rationale — first 3 meaningful words
+        _STOP = {
+            "a","an","the","and","or","for","to","is","are","was","were","with",
+            "in","at","of","on","as","it","by","this","that","we","our","their",
+            "has","have","been","will","can","they","its","not",
+        }
+        _rationale = plan.get("rationale", "") or (steps[0].get("focus", "") if steps else "")
+        _words = [w for w in _re.findall(r'\b[A-Za-z]{3,}\b', _rationale) if w.lower() not in _STOP]
+        short_desc = " ".join(_words[:3]).title() if _words else ""
+
+        if not short_desc:
+            # fallback: industry + angle
+            _industry = (top_company.industry.split("/")[0].strip()[:20] if top_company and top_company.industry else "")
+            _angle_map = {"save_time": "Efficiency", "add_capacity": "Capacity", "save_money": "Cost Savings", "redirect": "Engagement"}
+            _angle_label = _angle_map.get(top_angle, top_angle.replace("_", " ").title())
+            short_desc = f"{_industry} {_angle_label}".strip() if _industry else _angle_label
+
+        short_desc = short_desc[:30].strip()
+        campaign_name = f"Loop_{short_desc}_{date_str}"
 
         # ── 7b. Create the single campaign ───────────────────────────────────
         campaign_settings: dict = {
@@ -353,8 +368,8 @@ async def _run_automation_loop_async(force: bool = False):
                 "emails": test_mode_emails,
             }
 
-        # Use round-robin sender for the campaign default
-        sender = active_senders[0]
+        # One sender for the whole campaign (least-loaded active account)
+        campaign_sender = active_senders[0]
         campaign = Campaign(
             id=uuid.uuid4(),
             tenant_id=tenant_id,
@@ -364,7 +379,7 @@ async def _run_automation_loop_async(force: bool = False):
             campaign_type="outbound",
             sequence=sequence,
             settings=campaign_settings,
-            sender_account_id=sender.id,
+            sender_account_id=campaign_sender.id,
             created_by=uuid.UUID("00000000-0000-0000-0000-000000000001"),
             total_leads=len(selected),
         )
@@ -374,7 +389,6 @@ async def _run_automation_loop_async(force: bool = False):
 
         # ── 8. For each selected lead: add to campaign → generate → queue ─────
         emails_queued = 0
-        sender_idx = 0
 
         for selection in selected:
             lead_id = selection.get("lead_id")
@@ -386,12 +400,9 @@ async def _run_automation_loop_async(force: bool = False):
             contact = ctx["contact"]
             company = ctx["company"]
             recommended_angle = selection.get("recommended_angle", top_angle)
+            sender = campaign_sender  # same sender for all leads in this campaign
 
             try:
-                # Pick sender (round-robin)
-                sender = active_senders[sender_idx % len(active_senders)]
-                sender_idx += 1
-
                 # ── 8a. Create CampaignLead ───────────────────────────────────
                 cl_personalization: dict = {}
                 if test_mode_active and test_mode_emails:
@@ -410,8 +421,11 @@ async def _run_automation_loop_async(force: bool = False):
                 await db.flush()
 
                 # ── 8b. Build sender/lead context for personalization ─────────
+                # Derive first name from email local part (e.g. cto@ → "Cto", sam@ → "Sam")
+                _email_local = sender.email.split("@")[0]
+                _sender_first = _email_local.capitalize()
                 sender_info = {
-                    "sender_first_name": settings.sender_first_name,
+                    "sender_first_name": _sender_first,
                     "sender_last_name": "",
                     "sender_email": sender.email,
                     "sender_display_name": sender.display_name or "",
@@ -517,12 +531,26 @@ async def _run_automation_loop_async(force: bool = False):
                 next_step_delay = sequence[1]["delay_days"] if len(sequence) > 1 else 3
                 cl.current_step = 1
                 cl.status = "active"
-                cl.next_action_at = (
+                next_action_at = (
                     send_eta + timedelta(minutes=next_step_delay)
                     if test_mode_active
                     else _add_business_days(send_eta, next_step_delay)
                 )
+                cl.next_action_at = next_action_at
                 await db.flush()
+
+                # Schedule FollowUp row so process_follow_ups actually fires step 1
+                if len(sequence) > 1:
+                    from app.models.campaign import FollowUp
+                    follow_up = FollowUp(
+                        tenant_id=lead.tenant_id,
+                        campaign_lead_id=cl.id,
+                        step_number=1,
+                        scheduled_at=next_action_at,
+                        status="scheduled",
+                    )
+                    db.add(follow_up)
+                    await db.flush()
 
                 emails_queued += 1
                 logger.info(
