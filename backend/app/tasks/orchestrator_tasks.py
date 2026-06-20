@@ -472,27 +472,54 @@ async def _run_automation_loop_async(force: bool = False):
                         logger.warning("automation_loop: parse error on step 0 for lead %s", lead_id)
                         break
 
+                    subject = content.get("subject", "")
+
+                    # Subject line review (strategist)
+                    subj_review = await orchestrator.review_subject(
+                        subject=subject,
+                        contact_first_name=contact.first_name or "",
+                        company_name=company.name if company else "",
+                        company_industry=company.industry if company else "",
+                        step=1,
+                    )
+                    subj_approved = subj_review.get("approved", True)
+                    if not subj_approved:
+                        suggestion = subj_review.get("rewrite_suggestion", "")
+                        logger.info(
+                            "automation_loop: subject rejected for %s — score=%s issues=%s suggestion='%s'",
+                            contact.first_name, subj_review.get("score"), subj_review.get("issues"), suggestion,
+                        )
+                        # Use the strategist's suggested subject directly if provided
+                        if suggestion:
+                            content["subject"] = suggestion
+                            subject = suggestion
+
+                    # Body review (QA auditor)
                     review = await orchestrator.review_email(
-                        subject=content.get("subject", ""),
+                        subject=subject,
                         body_text=content.get("body_text", ""),
                         step=1,
                         contact_first_name=contact.first_name or "",
                         company_name=company.name if company else "",
                     )
 
-                    if review.get("approved", False) or attempt == 2:
+                    body_approved = review.get("approved", False)
+                    if (subj_approved and body_approved) or attempt == 2:
                         email_content = content
                         logger.info(
-                            "automation_loop: email for %s %s — score=%s approved=%s (attempt %d)",
+                            "automation_loop: email for %s %s — subj_score=%s body_score=%s approved=%s (attempt %d)",
                             contact.first_name, company.name if company else "",
-                            review.get("score"), review.get("approved"), attempt + 1,
+                            subj_review.get("score"), review.get("score"),
+                            subj_approved and body_approved, attempt + 1,
                         )
                         break
                     else:
                         rewrite_notes = review.get("rewrite_notes", "")
+                        if not subj_approved:
+                            rewrite_notes = f"Subject needs improvement: {'; '.join(subj_review.get('issues', []))}. " + rewrite_notes
                         logger.info(
-                            "automation_loop: rewriting email for %s — score=%s issues=%s",
-                            contact.first_name, review.get("score"), review.get("issues"),
+                            "automation_loop: rewriting email for %s — body_score=%s subj_score=%s",
+                            contact.first_name, review.get("score"), subj_review.get("score"),
                         )
 
                 if not email_content:

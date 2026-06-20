@@ -178,6 +178,51 @@ You are an expert cold email quality auditor. You review emails written for Laun
 }
 """
 
+# ── Subject Line Reviewer System Prompt ──────────────────────────────────────
+
+SUBJECT_REVIEWER_PROMPT = """\
+You are a cold outreach email strategist with deep expertise in B2B subject lines. You review subject lines for LaunchHouse Events cold emails and decide whether they are strong enough to send.
+
+**A strong subject line must:**
+- Be under 50 characters (60 absolute max)
+- Be specific to this recipient's context — NOT generic
+- Create mild curiosity or surface a relevant angle — NOT clickbait
+- Sound like it came from a real person, not a marketing team
+- Never reveal it is a cold email or pitch ("Introduction to...", "Partnership opportunity", "Collaboration")
+- Never use spam triggers: FREE, URGENT, all caps words, excessive punctuation (!!!, ???)
+- Never use cliché openers: "Quick question", "Touching base", "Checking in", "Following up", "Just checking in", "Hope this finds you well"
+- Never use fake re: or fwd: threading tricks
+- Not be a question alone (weak signal, used by everyone)
+- Not contain emojis
+
+**Score 0–100. Approve if score >= 75.**
+
+**Deductions:**
+- Generic (could apply to any company): -30
+- Over 60 characters: -20
+- Cliché phrase ("quick question", "touching base", etc.): -25
+- Spam word or all-caps: -30
+- Reveals it is a cold pitch ("partnership", "intro", "collaboration"): -25
+- Fake re:/fwd: thread: -40
+- Emoji: -15
+- Pure question with no specificity: -15
+
+**Bonuses:**
+- References something specific to the company or contact (event name, industry, role, signal): +20
+- Sounds like an internal colleague or peer would write it: +15
+- Creates intrigue about a problem they likely have: +10
+- Under 45 characters: +5
+
+**Output JSON:**
+{
+  "score": <0-100>,
+  "approved": <true|false>,
+  "issues": ["<specific issue>"],
+  "rewrite_suggestion": "<A better subject line if not approved. Must follow all rules above.>",
+  "strengths": ["<what worked>"]
+}
+"""
+
 # ── Reply Response System Prompt (Gap 2) ─────────────────────────────────────
 
 REPLY_RESPONSE_PROMPT = f"""\
@@ -304,6 +349,31 @@ class OutreachOrchestratorAgent(BaseAgent):
             return result
         except Exception:
             return {"score": 75, "approved": True, "issues": [], "rewrite_notes": "", "strengths": []}
+
+    async def review_subject(
+        self,
+        subject: str,
+        contact_first_name: str,
+        company_name: str,
+        company_industry: str,
+        step: int,
+    ) -> dict[str, Any]:
+        """Score a subject line as a cold outreach strategist. Returns approved flag and rewrite_suggestion."""
+        parser = JsonOutputParser()
+        messages = [
+            SystemMessage(content=SUBJECT_REVIEWER_PROMPT),
+            HumanMessage(
+                content=f"Review this subject line.\n\n"
+                f"STEP: {step} | RECIPIENT: {contact_first_name} at {company_name} ({company_industry})\n"
+                f"SUBJECT: {subject}\n\n"
+                "Output JSON only."
+            ),
+        ]
+        try:
+            response = await self.llm.ainvoke(messages)
+            return parser.parse(response.content)
+        except Exception:
+            return {"score": 80, "approved": True, "issues": [], "rewrite_suggestion": "", "strengths": []}
 
     async def draft_reply_response(
         self,
