@@ -316,20 +316,76 @@ async def _process_campaign_lead_async(campaign_lead_id: str):
                     }
 
         if email_content is None:
-            # Generate personalized email via AI using the full template playbook
+            # Generate + QA loop (up to 3 attempts): subject review then body review
             from app.agents.personalization_agent import PersonalizationAgent
+            from app.agents.orchestrator_agent import OutreachOrchestratorAgent
+            import logging as _log
+            _logger = _log.getLogger(__name__)
             agent = PersonalizationAgent()
-            email_content = await agent.run(
-                lead_id=str(cl.lead_id),
-                tenant_id=str(cl.tenant_id),
-                step_config=step,
-                lead_data=str(lead_data) if lead_data else None,
-                research_data=research_data,
-                sender_info=sender_info,
-                previous_email_subject=previous_email_subject,
-                previous_email_body=previous_email_body,
-                reply_intent=reply_intent,
-            )
+            orchestrator = OutreachOrchestratorAgent()
+            _is_auto_camp = bool((campaign.settings or {}).get("auto_generated"))
+            rewrite_notes = ""
+
+            for _attempt in range(3):
+                _content = await agent.run(
+                    lead_id=str(cl.lead_id),
+                    tenant_id=str(cl.tenant_id),
+                    step_config={**step, "rewrite_notes": rewrite_notes} if rewrite_notes else step,
+                    lead_data=str(lead_data) if lead_data else None,
+                    research_data=research_data,
+                    sender_info=sender_info,
+                    previous_email_subject=previous_email_subject,
+                    previous_email_body=previous_email_body,
+                    reply_intent=reply_intent,
+                )
+                if _content.get("parse_error") or not _is_auto_camp:
+                    # Non-auto campaigns skip review; parse errors bail immediately
+                    email_content = _content
+                    break
+
+                _subject = _content.get("subject", "")
+                _company_name = lead_data.get("company", {}).get("name", "") if isinstance(lead_data, dict) else ""
+                _company_industry = lead_data.get("company", {}).get("industry", "") if isinstance(lead_data, dict) else ""
+                _contact_first = lead_data.get("first_name", "") if isinstance(lead_data, dict) else ""
+
+                # Subject review
+                _subj_rev = await orchestrator.review_subject(
+                    subject=_subject,
+                    contact_first_name=_contact_first,
+                    company_name=_company_name,
+                    company_industry=_company_industry,
+                    step=current_step + 1,
+                )
+                _subj_ok = _subj_rev.get("approved", True)
+                if not _subj_ok:
+                    _suggestion = _subj_rev.get("rewrite_suggestion", "")
+                    _logger.info("campaign_tasks: subject rejected step=%s attempt=%s score=%s — '%s' → '%s'",
+                                 current_step, _attempt + 1, _subj_rev.get("score"), _subject, _suggestion)
+                    if _suggestion:
+                        _content["subject"] = _suggestion
+                        _subject = _suggestion
+
+                # Body review
+                _body_rev = await orchestrator.review_email(
+                    subject=_subject,
+                    body_text=_content.get("body_text", ""),
+                    step=current_step + 1,
+                    contact_first_name=_contact_first,
+                    company_name=_company_name,
+                )
+                _body_ok = _body_rev.get("approved", False)
+
+                if (_subj_ok and _body_ok) or _attempt == 2:
+                    email_content = _content
+                    _logger.info("campaign_tasks: email approved step=%s attempt=%s subj=%s body=%s",
+                                 current_step, _attempt + 1, _subj_rev.get("score"), _body_rev.get("score"))
+                    break
+                else:
+                    rewrite_notes = _body_rev.get("rewrite_notes", "")
+                    if not _subj_ok:
+                        rewrite_notes = f"Subject issues: {'; '.join(_subj_rev.get('issues', []))}. " + rewrite_notes
+                    _logger.info("campaign_tasks: rewriting step=%s attempt=%s subj_score=%s body_score=%s",
+                                 current_step, _attempt + 1, _subj_rev.get("score"), _body_rev.get("score"))
 
         # ── Test mode: round-robin email override ─────────────────────────────
         # Use the snapshot captured at launch time — immune to mid-campaign toggles.
