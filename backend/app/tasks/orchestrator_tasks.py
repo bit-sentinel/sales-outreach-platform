@@ -421,11 +421,12 @@ async def _run_automation_loop_async(force: bool = False):
                 await db.flush()
 
                 # ── 8b. Build sender/lead context for personalization ─────────
-                # Derive first name from email local part (e.g. cto@ → "Cto", sam@ → "Sam")
-                _email_local = sender.email.split("@")[0]
-                _sender_first = _email_local.capitalize()
+                # Resolve sender display name: known map takes priority (e.g. sam@ → "Sameera Gurung"),
+                # then display_name field, then capitalize email local part (e.g. cto@ → "Cto")
+                from app.agents.personalization_agent import _resolve_sender_name
+                _sender_display = _resolve_sender_name(sender.email, sender.display_name or "")
                 sender_info = {
-                    "sender_first_name": _sender_first,
+                    "sender_first_name": _sender_display,
                     "sender_last_name": "",
                     "sender_email": sender.email,
                     "sender_display_name": sender.display_name or "",
