@@ -20,6 +20,26 @@ def _add_business_days(start_dt, days: int):
     return result
 
 
+def _next_business_send_time(now):
+    """Return next Mon–Thu 10:00–16:00 UTC slot with 30–90 min jitter."""
+    import random
+    from datetime import timedelta
+    send = now.replace(second=0, microsecond=0)
+    for _ in range(7):
+        if send.weekday() < 4 and 10 <= send.hour < 16:
+            break
+        if send.weekday() >= 4 or send.hour >= 16:
+            days_ahead = (7 - send.weekday()) % 7 or 1
+            if send.weekday() >= 4:
+                days_ahead = (7 - send.weekday()) % 7
+                if days_ahead == 0:
+                    days_ahead = 7
+            send = (send + timedelta(days=days_ahead)).replace(hour=10, minute=0)
+        elif send.hour < 10:
+            send = send.replace(hour=10, minute=0)
+    return send + timedelta(minutes=random.randint(30, 90))
+
+
 def _make_session_factory():
     """Create a fresh engine + session factory for this OS process / event loop."""
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -339,7 +359,11 @@ async def _process_campaign_lead_async(campaign_lead_id: str):
             import traceback as _tb
             _log.getLogger(__name__).error("Test mode override failed: %s\n%s", _tm_err, _tb.format_exc())
 
-        # Create message record as DRAFT – user reviews before sending
+        # Auto-generated (loop) campaigns queue emails automatically; manual campaigns stay draft
+        _is_auto = bool((campaign.settings or {}).get("auto_generated"))
+        _test_mode_active = bool((campaign.settings or {}).get("test_mode_snapshot", {}).get("enabled"))
+        msg_status = "queued" if _is_auto else "draft"
+
         hooks = email_content.get("personalization_hooks") or []
         template_used = email_content.get("template_used")
         if template_used:
@@ -356,7 +380,7 @@ async def _process_campaign_lead_async(campaign_lead_id: str):
             subject=email_content.get("subject", ""),
             body_html=email_content.get("body_html", ""),
             body_text=email_content.get("body_text", ""),
-            status="draft",
+            status=msg_status,
             ai_generated=True,
             personalization_hooks=hooks,
         )
@@ -407,7 +431,16 @@ async def _process_campaign_lead_async(campaign_lead_id: str):
             )
             await db.commit()
 
-        # All emails remain as drafts regardless of step — manual send required
+        # Auto-generated campaigns: queue send_email immediately after message is committed
+        if _is_auto:
+            from datetime import timedelta
+            from app.tasks.email_tasks import send_email
+            now_utc = datetime.now(timezone.utc)
+            if _test_mode_active:
+                send_eta = now_utc + timedelta(seconds=5)
+            else:
+                send_eta = _next_business_send_time(now_utc)
+            send_email.apply_async(args=[message_id_str], eta=send_eta)
 
 
 @celery_app.task
