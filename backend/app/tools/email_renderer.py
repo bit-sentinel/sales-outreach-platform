@@ -116,7 +116,13 @@ def _paragraphs_to_html(body_text: str) -> str:
             )
         else:
             # Regular paragraph — join single-newline lines with <br>
-            inner = "<br>".join(_linkify(html.escape(l)) for l in lines if l.strip())
+            # Lines that are already HTML (e.g. injected button tags) pass through unescaped
+            def _safe_line(l: str) -> str:
+                stripped = l.strip()
+                if stripped.startswith("<") and stripped.endswith(">"):
+                    return stripped
+                return _linkify(html.escape(stripped))
+            inner = "<br>".join(_safe_line(l) for l in lines if l.strip())
             out_parts.append(
                 f'<p style="margin:0 0 20px;font-size:16px;line-height:26px;'
                 f'color:{DEFAULT_TEXT};font-family:Arial,Helvetica,sans-serif;">'
