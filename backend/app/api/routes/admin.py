@@ -67,6 +67,7 @@ class AIConfigUpdate(BaseModel):
 
 @router.get("/sender-accounts")
 async def list_sender_accounts(
+    current_user=Depends(get_current_user),
     tenant_id: uuid.UUID = Depends(get_tenant_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -100,6 +101,7 @@ async def list_sender_accounts(
 @router.post("/sender-accounts", status_code=201)
 async def create_sender_account(
     body: SenderAccountCreate,
+    current_user=Depends(require_role("admin")),
     tenant_id: uuid.UUID = Depends(get_tenant_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -138,6 +140,7 @@ async def create_sender_account(
 async def update_sender_account(
     account_id: uuid.UUID,
     body: SenderAccountUpdate,
+    current_user=Depends(require_role("admin")),
     tenant_id: uuid.UUID = Depends(get_tenant_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -168,6 +171,7 @@ async def update_sender_account(
 @router.delete("/sender-accounts/{account_id}", status_code=204)
 async def delete_sender_account(
     account_id: uuid.UUID,
+    current_user=Depends(require_role("admin")),
     tenant_id: uuid.UUID = Depends(get_tenant_id),
     db: AsyncSession = Depends(get_db),
 ):
