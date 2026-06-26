@@ -700,11 +700,14 @@ async def _run_health_monitor_async():
                 .where(SenderAccount.tenant_id == tenant_id, SenderAccount.is_active == True, SenderAccount.imap_host.isnot(None))
             )).scalars().all()
 
+            from app.services.crypto import decrypt_secret, is_encrypted
             for sender in senders:
                 try:
                     import imaplib
+                    raw_pw = sender.imap_password or ""
+                    imap_pw = decrypt_secret(raw_pw) if raw_pw and is_encrypted(raw_pw) else raw_pw
                     imap = imaplib.IMAP4_SSL(sender.imap_host, timeout=10)
-                    imap.login(sender.imap_user or sender.email, sender.imap_password or "")
+                    imap.login(sender.imap_user or sender.email, imap_pw)
                     imap.logout()
                 except Exception as e:
                     issues.append(("imap", "warning", f"IMAP failed for {sender.email}: {e}"))

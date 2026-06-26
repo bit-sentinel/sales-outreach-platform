@@ -367,12 +367,15 @@ async def _check_replies_async():
 
         seen_users: set[str] = set()
         inbox_list: list[dict] = []
+        from app.services.crypto import decrypt_secret, is_encrypted
         for sa in sa_rows:
             if sa.imap_user and sa.imap_user.lower() not in seen_users:
+                raw_pw = sa.imap_password or ""
+                pw = decrypt_secret(raw_pw) if raw_pw and is_encrypted(raw_pw) else raw_pw
                 inbox_list.append({
                     "imap_host": sa.imap_host or "imap.gmail.com",
                     "imap_user": sa.imap_user,
-                    "imap_password": sa.imap_password,
+                    "imap_password": pw,
                 })
                 seen_users.add(sa.imap_user.lower())
 

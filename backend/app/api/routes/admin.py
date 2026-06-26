@@ -14,6 +14,7 @@ from app.api.deps import get_current_user, get_tenant_id, require_role, Paginati
 from app.schemas.common import APIResponse
 from app.models.tenant import AuditLog, User, Tenant, ApiKey
 from app.models.campaign import SenderAccount
+from app.services.crypto import encrypt_secret
 
 router = APIRouter()
 
@@ -113,7 +114,7 @@ async def create_sender_account(
         daily_limit=body.daily_limit,
         imap_host=body.imap_host or None,
         imap_user=body.imap_user or None,
-        imap_password=body.imap_password or None,
+        imap_password=encrypt_secret(body.imap_password) if body.imap_password else None,
     )
     db.add(acct)
     await db.commit()
@@ -163,7 +164,7 @@ async def update_sender_account(
     if body.imap_user is not None:
         acct.imap_user = body.imap_user or None
     if body.imap_password is not None:
-        acct.imap_password = body.imap_password or None
+        acct.imap_password = encrypt_secret(body.imap_password) if body.imap_password else None
     await db.commit()
     return APIResponse(message="Updated")
 
