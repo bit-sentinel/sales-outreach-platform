@@ -288,17 +288,24 @@ class TargetedResearchAgent(BaseIntelligenceAgent):
             ) for r in (results or [])[:4] if getattr(r, "url", None)]
 
         if provider == "firecrawl":
-            from app.tools.web_search import scrape_url
-            md = await self.call(
+            # Use Firecrawl's search endpoint (not scrape — d.query is a question, not a URL)
+            from app.tools.web_search import search_web
+            results = await self.call(
                 provider="firecrawl", dedup_key=d.query,
-                factory=lambda: scrape_url(d.query, self.settings.firecrawl_api_key),
-                ttl_s=86_400,
+                factory=lambda: search_web(
+                    d.query,
+                    firecrawl_api_key=self.settings.firecrawl_api_key,
+                    tavily_api_key="",
+                    max_results=4,
+                ),
+                ttl_s=43_200,
             )
             return [EvidenceItem(
-                claim=f"Scraped page for {d.signal.value}", signal_type=d.signal,
-                source_type=SourceType.SCRAPE, source_provider="firecrawl",
-                source_url=d.query, raw_snippet=md[:1000], confidence=0.7,
-            )] if md else []
+                claim=(getattr(r, "title", "") or d.query)[:500], signal_type=d.signal,
+                source_type=SourceType.SEARCH, source_provider="firecrawl",
+                source_url=getattr(r, "url", None),
+                raw_snippet=(getattr(r, "content", "") or "")[:1000], confidence=0.65,
+            ) for r in (results or [])[:4] if getattr(r, "url", None)]
         return []
 
     # ── budget tracking via Redis (best-effort) ────────────────────────────

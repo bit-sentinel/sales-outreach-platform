@@ -1,13 +1,14 @@
 """
 Web search tool — wraps Tavily and Firecrawl with a unified interface.
 
-Both providers are run in parallel when available:
+Tavily is preferred when configured; Firecrawl search is used only as a
+fallback when no Tavily key is set:
   - Tavily  (AI-summarised search results, best for broad queries)
   - Firecrawl  (full-page content extraction, best for deep page scraping)
 
-`search_web(query)` runs both providers concurrently, merges, and deduplicates
-results by URL.  Individual provider failures are swallowed so the pipeline
-continues with partial results.
+`search_web(query)` picks one provider per call (Tavily if available, else
+Firecrawl), merges, and deduplicates results by URL. Individual provider
+failures are swallowed so the pipeline continues with partial results.
 
 `scrape_url(url)` extracts full-page markdown for a single URL via Firecrawl.
 """
@@ -184,7 +185,7 @@ async def search_web(
     max_results: int = 5,
 ) -> list[SearchResult]:
     """
-    Run a web search using Tavily AND Firecrawl in parallel, then merge results.
+    Run a web search via Tavily if configured, else fall back to Firecrawl search.
     Results are deduplicated by URL and sorted by relevance score.
     Returns a list of SearchResult objects, or [] if no provider is configured.
     """
@@ -193,7 +194,9 @@ async def search_web(
     tasks = []
     if tavily_api_key:
         tasks.append(_search_tavily(query, tavily_api_key, max_results))
-    if firecrawl_api_key:
+    elif firecrawl_api_key:
+        # Firecrawl search is a fallback — only used when Tavily is not configured.
+        # For URL scraping, use scrape_url() directly.
         tasks.append(_search_firecrawl(query, firecrawl_api_key, max_results))
 
     if not tasks:

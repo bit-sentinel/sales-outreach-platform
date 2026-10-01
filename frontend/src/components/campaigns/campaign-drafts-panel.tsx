@@ -106,9 +106,20 @@ export function CampaignDraftsPanel({ campaignId, campaignName, testEmails, onCl
     };
   }, [messages, fetchMessages]);
 
+  function stripSignature(text: string): string {
+    // Remove the auto-generated signature block (from "Best," onwards)
+    // so the edit textarea only shows the editable email body
+    const match = text.match(/(\n+\s*Best[,.]?\s*(?:regards[,.]?)?\s*\n)/i);
+    if (match && match.index !== undefined && match.index > text.length * 0.4) {
+      return text.slice(0, match.index).trimEnd();
+    }
+    return text;
+  }
+
   function startEdit(msg: MessageDraft) {
+    setExpandedId(msg.id);
     setEditingId(msg.id);
-    setEditState({ subject: msg.subject ?? '', body_text: msg.body_text ?? '', saving: false, saved: false });
+    setEditState({ subject: msg.subject ?? '', body_text: stripSignature(msg.body_text ?? ''), saving: false, saved: false });
   }
 
   function cancelEdit() {
@@ -388,6 +399,7 @@ export function CampaignDraftsPanel({ campaignId, campaignName, testEmails, onCl
                       {isEditing && editState ? (
                         <div className="space-y-2">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/40">Edit Email Body</p>
+                          <p className="text-[10px] text-white/30 -mt-1">Signature is added automatically — edit only the body above.</p>
                           <textarea
                             className="w-full rounded-[12px] border border-white/[0.15] bg-white/[0.06] px-4 py-3 text-sm text-white/85 placeholder-white/25 focus:border-[#1c8ed4]/60 focus:outline-none leading-relaxed resize-none"
                             rows={12}

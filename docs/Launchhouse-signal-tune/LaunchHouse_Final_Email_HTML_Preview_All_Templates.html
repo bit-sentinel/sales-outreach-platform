@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LaunchHouse Events — Email Design Preview (All Templates)</title>
+<style>
+  :root {
+    --signature-blue: #0066CC;
+    --dark-navy: #141D2B;
+    --light-blue-bg: #F0F5FF;
+    --default-text: #1E293B;
+    --muted-text: #64748B;
+    --line-border: #CBD5E1;
+    --white: #FFFFFF;
+    --page-bg: #F4F6FA;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--page-bg);
+    font-family: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: var(--default-text);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+
+  /* === Page header === */
+  .page-header {
+    background: var(--white);
+    border-bottom: 1px solid var(--line-border);
+    padding: 32px 48px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 0 rgba(20, 29, 43, 0.04);
+  }
+
+  .page-header h1 {
+    margin: 0 0 4px;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--dark-navy);
+  }
+
+  .page-header .subtitle {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted-text);
+  }
+
+  .page-header .nav-toggle {
+    display: inline-block;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--signature-blue);
+    text-decoration: none;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .page-nav {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line-border);
+  }
+
+  .page-nav.active { display: block; }
+
+  .page-nav ol {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 4px 16px;
+  }
+
+  .page-nav li {
+    counter-increment: tplcount;
+  }
+
+  .page-nav a {
+    color: var(--default-text);
+    text-decoration: none;
+    font-size: 12px;
+    line-height: 22px;
+    display: block;
+    padding: 2px 0;
+  }
+
+  .page-nav a:hover { color: var(--signature-blue); }
+
+  .page-nav a::before {
+    content: counter(tplcount) ". ";
+    color: var(--muted-text);
+    font-weight: 500;
+  }
+
+  .page-nav ol { counter-reset: tplcount; }
+
+  /* === Intro === */
+  .intro {
+    max-width: 900px;
+    margin: 32px auto;
+    padding: 24px 32px;
+    background: var(--white);
+    border: 1px solid var(--line-border);
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 22px;
+    color: var(--default-text);
+  }
+
+  .intro h2 {
+    margin: 0 0 12px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--dark-navy);
+  }
+
+  .intro p { margin: 0 0 12px; }
+  .intro p:last-child { margin: 0; }
+
+  .intro .note {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: var(--light-blue-bg);
+    border-left: 3px solid var(--signature-blue);
+    font-size: 13px;
+    color: var(--default-text);
+  }
+
+  /* === Template card === */
+  .template {
+    max-width: 900px;
+    margin: 0 auto 56px;
+    padding: 0 24px;
+  }
+
+  .template-meta {
+    margin-bottom: 16px;
+    padding: 16px 20px;
+    background: var(--white);
+    border: 1px solid var(--line-border);
+    border-radius: 6px;
+  }
+
+  .template-meta .tplnum {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--muted-text);
+    margin-bottom: 4px;
+  }
+
+  .template-meta h3 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--dark-navy);
+  }
+
+  .template-meta .specs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--muted-text);
+  }
+
+  .template-meta .spec-pill {
+    display: inline-block;
+    padding: 3px 10px;
+    background: var(--light-blue-bg);
+    border-radius: 12px;
+    color: var(--default-text);
+  }
+
+  .template-meta .subject {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line-border);
+    font-size: 12px;
+    color: var(--muted-text);
+  }
+
+  .template-meta .subject strong {
+    color: var(--default-text);
+    margin-right: 8px;
+  }
+
+  /* === Email container === */
+  .email {
+    max-width: 640px;
+    margin: 0 auto;
+    background: var(--white);
+    box-shadow: 0 1px 0 rgba(20, 29, 43, 0.04), 0 12px 36px rgba(20, 29, 43, 0.08);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  /* === Slim Header === */
+  .header-slim {
+    background: var(--signature-blue);
+    height: 60px;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .header-slim .wordmark {
+    color: var(--white);
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+
+  .header-slim .support {
+    color: var(--light-blue-bg);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 1.2px;
+  }
+
+  /* === Premium Header === */
+  .header-premium {
+    background: var(--signature-blue);
+    height: 128px;
+    padding: 28px 32px 0;
+    position: relative;
+  }
+
+  .header-premium::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 24px;
+    height: 2px;
+    background: var(--signature-blue);
+  }
+
+  .header-premium .wordmark {
+    color: var(--white);
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
+  .header-premium .brand-line {
+    color: var(--light-blue-bg);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 22px;
+    max-width: 80%;
+  }
+
+  /* === Keyline === */
+  .keyline {
+    height: 1px;
+    background: var(--signature-blue);
+    width: 100%;
+  }
+
+  /* === Body === */
+  .body {
+    padding: 36px 40px;
+  }
+
+  .body p {
+    margin: 0 0 20px;
+    font-size: 16px;
+    line-height: 26px;
+    color: var(--default-text);
+  }
+
+  .body p:last-of-type { margin-bottom: 0; }
+
+  /* === Section marker (Post-Call Recap only) === */
+  .section-marker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 24px 0 12px;
+  }
+
+  .section-marker .square {
+    width: 6px;
+    height: 6px;
+    background: var(--signature-blue);
+    flex-shrink: 0;
+  }
+
+  .section-marker .label {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1.4px;
+    color: var(--dark-navy);
+    text-transform: uppercase;
+  }
+
+  /* === Detail block === */
+  .detail-block {
+    background: var(--light-blue-bg);
+    border-radius: 4px;
+    padding: 16px;
+    margin: 16px 0;
+    font-size: 14px;
+    line-height: 22px;
+    color: var(--default-text);
+  }
+
+  .detail-block .row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+
+  .detail-block .row:last-child { margin-bottom: 0; }
+
+  .detail-block .key {
+    color: var(--muted-text);
+    font-size: 12px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    width: 70px;
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+
+  .detail-block .val {
+    color: var(--default-text);
+    font-size: 14px;
+  }
+
+  /* === CTAs === */
+  .cta-link {
+    color: var(--signature-blue);
+    font-weight: 500;
+    text-decoration: underline;
+  }
+
+  .cta-outline {
+    display: inline-block;
+    border: 1px solid var(--signature-blue);
+    background: transparent;
+    color: var(--signature-blue);
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 11px 21px;
+    border-radius: 6px;
+    margin: 4px 0;
+  }
+
+  .cta-button {
+    display: inline-block;
+    background: var(--signature-blue);
+    color: var(--white);
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 12px 22px;
+    border-radius: 6px;
+    margin: 4px 0;
+  }
+
+  .cta-line {
+    margin: 16px 0;
+  }
+
+  .bullet-list {
+    list-style: none;
+    margin: 0 0 20px;
+    padding: 0;
+  }
+
+  .bullet-list li {
+    font-size: 16px;
+    line-height: 26px;
+    color: var(--default-text);
+    padding-left: 18px;
+    position: relative;
+    margin-bottom: 6px;
+  }
+
+  .bullet-list li::before {
+    content: "—";
+    position: absolute;
+    left: 0;
+    color: var(--default-text);
+  }
+
+  /* === Signature === */
+  .signature {
+    margin-top: 28px;
+    line-height: 22px;
+  }
+
+  .signature .name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--default-text);
+  }
+
+  .signature .company {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--default-text);
+  }
+
+  .signature .role {
+    font-size: 13px;
+    color: var(--muted-text);
+    line-height: 20px;
+  }
+
+  .signature a {
+    font-size: 14px;
+    color: var(--signature-blue);
+    text-decoration: underline;
+    font-weight: 500;
+  }
+
+  /* === Footer === */
+  .footer {
+    background: var(--light-blue-bg);
+    border-top: 1px solid var(--line-border);
+    padding: 28px 40px 24px;
+  }
+
+  .footer .row-1 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--dark-navy);
+    margin-bottom: 6px;
+  }
+
+  .footer .row-2 {
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--default-text);
+    margin-bottom: 12px;
+  }
+
+  .footer .row-3 {
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--muted-text);
+  }
+
+  .footer .row-3 a {
+    color: var(--signature-blue);
+    text-decoration: underline;
+  }
+
+  /* === Bottom note === */
+  .bottom-note {
+    max-width: 900px;
+    margin: 64px auto 48px;
+    padding: 20px 32px;
+    background: var(--white);
+    border: 1px solid var(--line-border);
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--muted-text);
+  }
+
+  .bottom-note strong {
+    color: var(--default-text);
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  /* === Print === */
+  @media print {
+    body { background: var(--white); }
+    .page-header { position: static; box-shadow: none; }
+    .page-nav { display: block !important; }
+    .email { box-shadow: none; border: 1px solid var(--line-border); }
+    .template { page-break-inside: avoid; margin-bottom: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================== -->
+<!-- PAGE HEADER + NAV                              -->
+<!-- ============================================== -->
+
+<div class="page-header">
+  <h1>LaunchHouse Events — Final Email Design Preview</h1>
+  <p class="subtitle">All 16 approved email templates · Operations Strip system · v02 · 2026-05-13 · Signature Blue updated to #0066CC</p>
+  <a class="nav-toggle" onclick="document.querySelector('.page-nav').classList.toggle('active')">Toggle template index ↓</a>
+  <nav class="page-nav">
+    <ol>
+      <li><a href="#tpl-01">Day 1 — Cold Outreach</a></li>
+      <li><a href="#tpl-02">Day 4 — Value-Add</a></li>
+      <li><a href="#tpl-03">Day 9 — Bump</a></li>
+      <li><a href="#tpl-04">Day 20 — Break-Up</a></li>
+      <li><a href="#tpl-05">Event-Trigger 31–120 (plain link)</a></li>
+      <li><a href="#tpl-06">Event-Trigger 31–120 (outline)</a></li>
+      <li><a href="#tpl-07">Event-Trigger 120+</a></li>
+      <li><a href="#tpl-08">Rush Support 0–30</a></li>
+      <li><a href="#tpl-09">Last-Mile QA 0–14</a></li>
+      <li><a href="#tpl-10">Meeting Confirmation</a></li>
+      <li><a href="#tpl-11">Post-Call Recap</a></li>
+      <li><a href="#tpl-12">Positive Interest reply</a></li>
+      <li><a href="#tpl-13">Send Me More Info reply</a></li>
+      <li><a href="#tpl-14">Not Now reply</a></li>
+      <li><a href="#tpl-15">Already Have Support reply</a></li>
+      <li><a href="#tpl-16">Wrong Contact reply</a></li>
+    </ol>
+  </nav>
+</div>
+
+<!-- ============================================== -->
+<!-- INTRO                                          -->
+<!-- ============================================== -->
+
+<section class="intro">
+  <h2>About this preview</h2>
+  <p>This file is a <strong>visual preview</strong> of every LaunchHouse Events email template in the approved Operations Strip design system. Templates render with sample personalization values populated (e.g., <em>Jordan</em> for <code>{{first_name}}</code>) so each email displays as it would arrive in a real inbox.</p>
+  <p>Each template card shows the Slim or Premium Header, body, CTA treatment, signature variant (5-line standard or 3-line compact), and footer — assembled per the canonical specifications in <code>02_Email_HTML_Agent_Implementation_Brief.md</code> and <code>06A_Operations_Strip_Email_Spec.md</code>.</p>
+  <div class="note">
+    <strong>This is a preview for review purposes, not production-ready email HTML.</strong> Production email HTML must use table-based layouts with inline CSS, MSO conditional comments for Outlook bulletproof button rendering, and email-safe markup. This preview uses modern CSS for visual fidelity only. The CTO's implementation will produce email-safe HTML separately.
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- TEMPLATE 01 — DAY 1 COLD OUTREACH              -->
+<!-- ============================================== -->
+
+<section class="template" id="tpl-01">
+  <div class="template-meta">
+    <span class="tplnum">Template 01 · Core Sequence</span>
+    <h3>Day 1 — Initial Outreach (Cold)</h3>
+    <div class="specs">
+      <span class="spec-pill">Header: Slim</span>
+      <span class="spec-pill">CTA: Plain link</span>
+      <span class="spec-pill">Signature: 5-line</span>
+      <span class="spec-pill">Word count: ~95</span>
+    </div>
+    <div class="subject"><strong>Subject:</strong> Three regional summits this half — note for the Acme Industries event team</div>
+  </div>
+
+  <div class="email">
+    <div class="header-slim">
+      <div class="wordmark">LaunchHouse</div>
+      <div class="support">CVENT REGISTRATION &amp; EVENT TECHNOLOGY OPERATIONS</div>
+    </div>
+    <div class="keyline"></div>
+    <div class="body">
+      <p>Hi Jordan,</p>
+      <p>Noticed three regional summits this half on the Acme Industries side — a cadence like that usually means Cvent build, QA, and reporting work stack up against the busiest stretch of the calendar, not the quietest.</p>
+      <p>For teams already running Cvent at that pace, the challenge is usually not the platform. It is finding the time to plan the registration paths, run a clean QA pass before launch, and make sure reporting is ready for stakeholder review.</p>
+      <p>That is where LaunchHouse helps — registration build, QA, and reporting setup, alongside your existing event team rather than in place of it.</p>
+      <p><a href="#" class="cta-link">Happy to share a short note on the Cvent registration patterns we usually look at first?</a></p>
+      <p>Best,</p>
+      <div class="signature">
+        <div class="name">Sneh</div>
+        <div class="company">LaunchHouse Events</div>
+        <div class="role">Cvent Registration &amp; Event Technology Operations</div>
+        <div><a href="#">calendly.com/launchhouse/30min</a></div>
+        <div><a href="#">www.launchhouse.events</a></div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="row-1">LaunchHouse Events</div>
+      <div class="row-2">Premium Cvent registration operations support — built around your existing event team's workflow.</div>
+      <div class="row-3"><a href="#">www.launchhouse.events</a> &nbsp;·&nbsp; If this is not relevant, reply "not now" and we won't follow up.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- TEMPLATE 02 — DAY 4 VALUE-ADD                  -->
+<!-- ============================================== -->
+
+<section class="template" id="tpl-02">
+  <div class="template-meta">
+    <span class="tplnum">Template 02 · Core Sequence</span>
+    <h3>Day 4 — Value-Add Email</h3>
+    <div class="specs">
+      <span class="spec-pill">Header: Slim</span>
+      <span class="spec-pill">CTA: Plain link to QA Checklist</span>
+      <span class="spec-pill">Signature: 5-line</span>
+      <span class="spec-pill">Word count: ~120</span>
+    </div>
+    <div class="subject"><strong>Subject:</strong> Pre-launch Cvent QA — a checklist to keep on hand</div>
+  </div>
+
+  <div class="email">
+    <div class="header-slim">
+      <div class="wordmark">LaunchHouse</div>
+      <div class="support">CVENT REGISTRATION &amp; EVENT TECHNOLOGY OPERATIONS</div>
+    </div>
+    <div class="keyline"></div>
+    <div class="body">
+      <p>Hi Jordan,</p>
+      <p>Not a follow-up — something more useful instead.</p>
+      <p>One pattern we see often with mid-market event teams on Cvent: the registration build itself gets done well, but the pre-launch QA pass gets compressed when timelines tighten. That last pass is usually what determines whether attendees see a clean experience or a friction-filled one.</p>
+      <p>We built the Cvent Pre-Launch QA Checklist around the checks we would want in place before a Cvent registration launch — registration paths, form logic, attendee comms, reporting readiness, and final go-live checks.</p>
+      <p>The kind of artifact that is useful to have on hand before your next build, even if you never need a partner.</p>
+      <p><a href="#" class="cta-link">Cvent Pre-Launch QA Checklist →</a></p>
+      <p>No reply needed if it is not relevant.</p>
+      <p>Best,</p>
+      <div class="signature">
+        <div class="name">Sneh</div>
+        <div class="company">LaunchHouse Events</div>
+        <div class="role">Cvent Registration &amp; Event Technology Operations</div>
+        <div><a href="#">calendly.com/launchhouse/30min</a></div>
+        <div><a href="#">www.launchhouse.events</a></div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="row-1">LaunchHouse Events</div>
+      <div class="row-2">Premium Cvent registration operations support — built around your existing event team's workflow.</div>
+      <div class="row-3"><a href="#">www.launchhouse.events</a> &nbsp;·&nbsp; If this is not relevant, reply "not now" and we won't follow up.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- TEMPLATE 03 — DAY 9 BUMP                       -->
+<!-- ============================================== -->
+
+<section class="template" id="tpl-03">
+  <div class="template-meta">
+    <span class="tplnum">Template 03 · Core Sequence</span>
+    <h3>Day 9 — Bump</h3>
+    <div class="specs">
+      <span class="spec-pill">Header: Slim</span>
+      <span class="spec-pill">CTA: Plain-link micro-ask</span>
+      <span class="spec-pill">Signature: Compact 3-line</span>
+      <span class="spec-pill">Word count: ~40</span>
+    </div>
+    <div class="subject"><strong>Subject:</strong> Re: Three regional summits this half — note for the Acme Industries event team</div>
+  </div>
+
+  <div class="email">
+    <div class="header-slim">
+      <div class="wordmark">LaunchHouse</div>
+      <div class="support">CVENT REGISTRATION &amp; EVENT TECHNOLOGY OPERATIONS</div>
+    </div>
+    <div class="keyline"></div>
+    <div class="body">
+      <p>Hi Jordan,</p>
+      <p>Following up briefly. If the build queue has eased on your side, no action needed — happy to close the loop.</p>
+      <p>If it has not, the Cvent Pre-Launch QA Checklist is still here:<br><a href="#" class="cta-link">Cvent Pre-Launch QA Checklist →</a></p>
+      <p>Best,</p>
+      <div class="signature">
+        <div class="name">Sneh</div>
+        <div class="company">LaunchHouse Events</div>
+        <div class="role">Cvent Registration &amp; Event Technology Operations</div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="row-1">LaunchHouse Events</div>
+      <div class="row-2">Premium Cvent registration operations support — built around your existing event team's workflow.</div>
+      <div class="row-3"><a href="#">www.launchhouse.events</a> &nbsp;·&nbsp; If this is not relevant, reply "not now" and we won't follow up.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- TEMPLATE 04 — DAY 20 BREAK-UP                  -->
+<!-- ============================================== -->
+
+<section class="template" id="tpl-04">
+  <div class="template-meta">
+    <span class="tplnum">Template 04 · Core Sequence</span>
+    <h3>Day 20 — Break-Up</h3>
+    <div class="specs">
+      <span class="spec-pill">Header: Slim</span>
+      <span class="spec-pill">CTA: None</span>
+      <span class="spec-pill">Signature: Compact 3-line</span>
+      <span class="spec-pill">Word count: ~35</span>
+    </div>
+    <div class="subject"><strong>Subject:</strong> Closing this thread</div>
+  </div>
+
+  <div class="email">
+    <div class="header-slim">
+      <div class="wordmark">LaunchHouse</div>
+      <div class="support">CVENT REGISTRATION &amp; EVENT TECHNOLOGY OPERATIONS</div>
+    </div>
+    <div class="keyline"></div>
+    <div class="body">
+      <p>Hi Jordan,</p>
+      <p>Closing this thread on my end. If LaunchHouse becomes useful for Cvent registration operations support later in the year — a new event on the calendar, a registration build that needs extra hands, a stalled piece that needs a clean second pass — the door is open.</p>
+      <p>Best,</p>
+      <div class="signature">
+        <div class="name">Sneh</div>
+        <div class="company">LaunchHouse Events</div>
+        <div class="role">Cvent Registration &amp; Event Technology Operations</div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="row-1">LaunchHouse Events</div>
+      <div class="row-2">Premium Cvent registration operations support — built around your existing event team's workflow.</div>
+      <div class="row-3"><a href="#">www.launchhouse.events</a> &nbsp;·&nbsp; If this is not relevant, reply "not now" and we won't follow up.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- TEMPLATE 05 — EVENT-TRIGGER 31–120 (plain link) -->
+<!-- ============================================== -->
+
+<section class="template" id="tpl-05">
+  <div class="template-meta">
+    <span class="tplnum">Template 05 · Event-Triggered</span>
+    <h3>Event-Trigger 31–120 days out (plain-link variant)</h3>
+    <div class="specs">
+      <span class="spec-pill">Header: Slim</span>
+      <span class="spec-pill">CTA: Plain link</span>
+      <span class="spec-pill">Signature: 5-line</span>
+      <span class="spec-pill">Use: 61–120 days out</span>
+    </div>
+    <div class="subject"><strong>Subject:</strong> The Acme Customer Summit — note on registration ops</div>
+  </div>
+
+  <div class="email">
+    <div class="header-slim">
+      <div class="wordmark">LaunchHouse</div>
+      <div class="support">CVENT REGISTRATION &amp; EVENT TECHNOLOGY OPERATIONS</div>
+    </div>
+    <div class="keyline"></div>
+    <div class="body">
+      <p>Hi Jordan,</p>
+      <p>Saw The Acme Customer Summit on the calendar for September 12 — close enough that the registration build is probably becoming real, but early enough to make the setup clean.</p>
+      <p>At this stage, the registration path structure, form logic, and reporting setup usually matter most. Those early choices tend to affect every later part of the build.</p>
+      <p>That is where LaunchHouse supports the team — Cvent registration build, QA, and reporting setup alongside your existing workflow.</p>
+      <p><a href="#" class="cta-link">Happy to share how we would look at the registration build for The Acme Customer Summit?</a></p>
+      <p>Best,</p>
+      <div class="signature">
+        <div class="name">Sneh</div>
+        <div class="company">LaunchHouse Events</div>
+        <div class="role">Cvent Registration &amp; Event Technology Operations</div>
+        <div><a href="#">calendly.com/launchhouse/30min</a></div>
+        <div><a href="#">www.launchhouse.events</a></div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="row-1">LaunchHouse Events</div>
+      <div class="row-2">Premium Cvent registration operations support — built around your existing event team's workflow.</div>
+      <div class="row-3"><a href="#">www.launchhouse.events</a> &nbsp;·&nbsp; If this is not relevant, reply "not now" and we won't follow up.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- TEMPLATE 06 — EVENT-TRIGGER 31–120 (outline)    -->
+<!-- ============================================== -->
+
+<section class="template" id="tpl-06">
+  <div class="template-meta">
+    <span class="tplnum">Template 06 · Event-Triggered</span>
+    <h3>Event-Trigger 31–120 days out (Outline CTA variant)</h3>
+    <div class="specs">
+      <span class="spec-pill">Header: Slim</span>
+      <span class="spec-pill">CTA: Outline (transitional)</span>
+      <span class="spec-pill">Signature: 5-line</span>
+      <span class="spec-pill">Use: 31–60 days out</span>
+    </div>
+    <div class="subject"><strong>Subject:</strong> The Acme Customer Summit — build window</div>
+  </div>
+
+  <div class="email">
+    <div class="header-slim">
+      <div class="wordmark">LaunchHouse</div>
+      <div class="support">CVENT REGISTRATION &amp; EVENT TECHNOLOGY OPERATIONS</div>
+    </div>
+    <div class="keyline"></div>
+    <div class="body">
+      <p>Hi Jordan,</p>
+      <p>Saw The Acme Customer Summit on the calendar for September 12 — this is usually the window where registration setup choices start affecting the rest of the build.</p>
+      <p>If path structure, form logic, QA, or reporting setup still needs focused support, LaunchHouse can help carry that work inside your existing event workflow.</p>
+      <div class="cta-line">
+        <a href="#" class="cta-outline">Worth a short scoping conversation →</a>
+      </div>
+      <p>Best,</p>
+      <div class="signature">
+        <div class="name">Sneh</div>
+        <div class="company">LaunchHouse Events</div>
+        <div class="role">Cvent Registration &amp; Event Technology Operations</div>
+        <div><a href="#">calendly.com/launchhouse/30min</a></div>
+        <div><a href="#">www.launchhouse.events</a></div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="row-1">LaunchHouse Events</div>
+      <div class="row-2">Premium Cvent registration operations support — built around your existing event team's workflow.</div>
+      <div class="row-3"><a href="#">www.launchhouse.events</a> &nbsp;·&nbsp; If this is not relevant, reply "not now" and we won't follow up.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- TEMPLATE 07 — EVENT-TRIGGER 120+ DAYS          -->
+<!-- ============================================== -->
+
+<section class="template" id="tpl-07">
+  <div class="template-meta">
+    <span class="tplnum">Template 07 · Event-Triggered</span>
+    <h3>Event-Trigger 120+ days out (Long-Lead Seed)</h3>
+    <div class="specs">
+      <span class="spec-pill">Header: Slim</span>
+      <span class="spec-pill">CTA: Plain link to QA Checklist</span>
+      <span class="spec-pill">Signature: 5-line</span>
+      <span class="spec-pill">Use: 120+ days out</span>
+    </div>
+    <div class="subject"><strong>Subject:</strong> The Acme Annual Conference — early note on registration ops</div>
+  </div>
+
+  <div class="email">
+    <div class="header-slim">
+      <div class="wordmark">LaunchHouse</div>
+      <div class="support">CVENT REGISTRATION &amp; EVENT TECHNOLOGY OPERATIONS</div>
+    </div>
+    <div class="keyline"></div>
+    <div class="body">
+      <p>Hi Jordan,</p>
+      <p>Saw The Acme Annual Conference on the calendar — far enough out that the build hasn't started, but close enough to flag.</p>
+      <p>The earliest decisions on a Cvent registration build (path architecture, field structure, reporting framing) tend to be the ones with the most downstream effect — and the ones that get rushed once the timeline tightens.</p>
+      <p>If useful when planning kicks off, the LaunchHouse Cvent Pre-Launch QA Checklist is here:</p>
+      <p><a href="#" class="cta-link">Cvent Pre-Launch QA Checklist →</a></p>
+      <p>Happy to be a useful conversation when you start the build. No reply needed before then.</p>
+      <p>Best,</p>
+      <div class="signature">
+        <div class="name">Sneh</div>
+        <div class="company">LaunchHouse Events</div>
+        <div class="role">Cvent Registration &amp; Event Technology Operations</div>
+        <div><a href="#">calendly.com/launchhouse/30min</a></div>
+        <div><a href="#">www.launchhouse.events</a></div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="row-1">LaunchHouse Events</div>
+      <div class="row-2">Premium Cvent registration operations support — built around your existing event team's workflow.</div>
+      <div class="row-3"><a href="#">www.launchhouse.events</a> &nbsp;·&nbsp; If this is not relevant, reply "not now" and we won't follow up.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- TEMPLATE 08 — RUSH SUPPORT                     -->
+<!-- ============================================== -->
+
+<section class="template" id="tpl-08">
+  <div class="template-meta">
+    <span class="tplnum">Template 08 · Event-Triggered</span>
+    <h3>Rush Support — 0–30 days out</h3>
+    <div class="specs">
+      <span class="spec-pill">Header: Slim</span>
+      <span class="spec-pill">CTA: Outline (transitional)</span>
+      <span class="spec-pill">Signature: 5-line</span>
+      <span class="spec-pill">Word count: ~80</span>
+    </div>
+    <div class="subject"><strong>Subject:</strong> The Acme Customer Summit — rush capacity if useful</div>
+  </div>
+
+  <div class="email">
+    <div class="header-slim">
+      <div class="wordmark">LaunchHouse</div>
+      <div class="support">CVENT REGISTRATION &amp; EVENT TECHNOLOGY OPERATIONS</div>
+    </div>
+    <div class="keyline"></div>
+    <div class="body">
+      <p>Hi Jordan,</p>
+      <p>If The Acme Customer Summit on September 12 is in the compression window — the last few weeks before launch — and there is a specific piece that needs focused support this week, LaunchHouse can carry that work without disrupting the build already in flight.</p>
+      <p>We do not pitch panic. We take work off the team's plate when timelines compress.</p>
+      <div class="cta-line">
+        <a href="#" class="cta-outline">Open a 30-minute scoping slot this week →</a>
+      </div>
+      <p>Best,</p>
+      <div class="signature">
+        <div class="name">Sneh</div>
+        <div class="company">LaunchHouse Events</div>
+        <div class="role">Cvent Registration &amp; Event Technology Operations</div>
+        <div><a href="#">calendly.com/launchhouse/30min</a></div>
+        <div><a href="#">www.launchhouse.events</a></div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="row-1">LaunchHouse Events</div>
+      <div class="row-2">Premium Cvent registration operations support — built around your existing event team's workflow.</div>
+      <div class="row-3"><a href="#">www.launchhouse.events</a> &nbsp;·&nbsp; If this is not relevant, reply "not now" and we won't follow up.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- TEMPLATE 09 — LAST-MILE QA                     -->
+<!-- ============================================== -->
+
+<section class="template" id="tpl-09">
+  <div class="template-meta">
+    <span class="tplnum">Template 09 · Event-Triggered</span>
+    <h3>Last-Mile QA Support — 0–14 days out</h3>
+    <div class="specs">
+      <span class="spec-pill">Header: Slim</span>
+      <span class="spec-pill">CTA: Outline (transitional)</span>
+      <span class="spec-pill">Signature: 5-line</span>
+      <span class="spec-pill">Bulleted scope list</span>
+    </div>
+    <div class="subject"><strong>Subject:</strong> The Acme Customer Summit — last-mile QA capacity</div>
+  </div>
+
+  <div class="email">
+    <div class="header-slim">
+      <div class="wordmark">LaunchHouse</div>
+      <div class="support">CVENT REGISTRATION &amp; EVENT TECHNOLOGY OPERATIONS</div>
+    </div>
+    <div class="keyline"></div>
+    <div class="body">
+      <p>Hi Jordan,</p>
+      <p>If The Acme Customer Summit is launching in the next two weeks and there is a specific piece that needs eyes, LaunchHouse can carry it cleanly this week. The four pieces that compress most often:</p>
+      <ul class="bullet-list">
+        <li>Final QA pass on the registration paths and form logic</li>
+        <li>Attendee comms review (confirmations, reminders, day-of)</li>
+        <li>Registration-path final check before invites send</li>
+        <li>Reporting setup verification for the post-event readout</li>
+      </ul>
+      <p>We do not replace the team. We take one of those pieces off the plate so the rest of the build holds.</p>
+      <div class="cta-line">
+        <a href="#" class="cta-outline">Open a 30-minute scoping slot →</a>
+      </div>
+      <p>Best,</p>
+      <div class="signature">
+        <div class="name">Sneh</div>
+        <div class="company">LaunchHouse Events</div>
+        <div class="role">Cvent Registration &amp; Event Technology Operations</div>
+        <div><a href="#">calendly.com/launchhouse/30min</a></div>
+        <div><a href="#">www.launchhouse.events</a></div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="row-1">LaunchHouse Events</div>
+      <div class="row-2">Premium Cvent registration operations support — built around your existing event team's workflow.</div>
+      <div class="row-3"><a href="#">www.launchhouse.events</a> &nbsp;·&nbsp; If this is not relevant, reply "not now" and we won't follow up.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- TEMPLATE 10 — MEETING CONFIRMATION (Premium)   -->
+<!-- ============================================== -->
+
+<section class="template" id="tpl-10">
+  <div class="template-meta">
+    <span class="tplnum">Template 10 · High-Intent</span>
+    <h3>Meeting Confirmation</h3>
+    <div class="specs">
+      <span class="spec-pill">Header: Premium</span>
+      <span class="spec-pill">CTA: Soft-fill button</span>
+      <span class="spec-pill">Signature: 5-line</span>
+      <span class="spec-pill">Detail block: Yes</span>
+      <span class="spec-pill">Section markers: No</span>
+    </div>
+    <div class="subject"><strong>Subject:</strong> Confirming our call on Thursday</div>
+  </div>
+
+  <div class="email">
+    <div class="header-premium">
+      <div class="wordmark">LaunchHouse</div>
+      <div class="brand-line">Cvent registration execution without the internal overload.</div>
+    </div>
+    <div class="keyline"></div>
+    <div class="body">
+      <p>Hi Jordan,</p>
+      <p>Confirming our call on Thursday. A short note on what we will cover so the time stays focused.</p>
+      <div class="detail-block">
+        <div class="row"><div class="key">Meeting</div><div class="val">Thursday, May 14 · 2:00 PM EST · 30 minutes</div></div>
+        <div class="row"><div class="key">Focus</div><div class="val">Registration scope · Reporting setup · Timeline</div></div>
+        <div class="row"><div class="key">Format</div><div class="val">Video — link in the calendar invite</div></div>
+      </div>
+      <p>I will come prepared with a few focused questions about your registration setup, timeline, reporting needs, and where extra support would actually help. If there is anything specific you would like to put on the agenda, send it through before we meet — happy to adjust.</p>
+      <p>The calendar invite is in your inbox. If anything shifts on your side, just reply — easy to reschedule.</p>
+      <div class="cta-line">
+        <a href="#" class="cta-button">Add to calendar →</a>
+      </div>
+      <p>Best,</p>
+      <div class="signature">
+        <div class="name">Sneh</div>
+        <div class="company">LaunchHouse Events</div>
+        <div class="role">Cvent Registration &amp; Event Technology Operations</div>
+        <div><a href="#">calendly.com/launchhouse/30min</a></div>
+        <div><a href="#">www.launchhouse.events</a></div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="row-1">LaunchHouse Events</div>
+      <div class="row-2">Premium Cvent registration operations support — built around your existing event team's workflow.</div>
+      <div class="row-3"><a href="#">www.launchhouse.events</a> &nbsp;·&nbsp; If this is not relevant, reply "not now" and we won't follow up.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- TEMPLATE 11 — POST-CALL RECAP (Premium)        -->
+<!-- ============================================== -->
+
+<section class="template" id="tpl-11">
+  <div class="template-meta">
+    <span class="tplnum">Template 11 · High-Intent</span>
+    <h3>Post-Call Recap</h3>
+    <div class="specs">
+      <span class="spec-pill">Header: Premium</span>
+      <span class="spec-pill">CTA: Soft-fill button</span>
+      <span class="spec-pill">Signature: 5-line</span>
+      <span class="spec-pill">Section markers: 3</span>
+      <span class="spec-pill">Detail block: Yes</span>
+    </div>
+    <div class="subject"><strong>Subject:</strong> Recap — yesterday's call</div>
+  </div>
+
+  <div class="email">
+    <div class="header-premium">
+      <div class="wordmark">LaunchHouse</div>
+      <div class="brand-line">Cvent registration execution without the internal overload.</div>
+    </div>
+    <div class="keyline"></div>
+    <div class="body">
+      <p>Hi Jordan,</p>
+      <p>Quick recap from yesterday's call and a proposed next step on our end.</p>
+
+      <div class="section-marker">
+        <span class="square"></span>
+        <span class="label">WHAT WE HEARD</span>
+      </div>
+      <p>Two regional summits in Q3, one customer event in October, and a registration build backlog the internal team is carrying alongside speaker management. Reporting readiness was the biggest pain point in last year's program.</p>
+
+      <div class="section-marker">
+        <span class="square"></span>
+        <span class="label">WHERE LAUNCHHOUSE CAN HELP</span>
+      </div>
+      <p>Registration architecture for the summit series, Flex page build for the customer event, QA before each launch, and a cleaner reporting structure set upstream so post-event readouts don't require manual rebuilds.</p>
+
+      <div class="section-marker">
+        <span class="square"></span>
+        <span class="label">NEXT STEPS</span>
+      </div>
+      <div class="detail-block">
+        <div class="row"><div class="key">Proposed</div><div class="val">30-minute scope and timing review</div></div>
+        <div class="row"><div class="key">Timing</div><div class="val">Thursday, May 14 · 2:00 PM EST</div></div>
+        <div class="row"><div class="key">Owner</div><div class="val">Sneh on our side; Jordan on yours</div></div>
+      </div>
+
+      <p>If the timing works, the calendar slot is below. Open to moving it if a different window fits better.</p>
+      <div class="cta-line">
+        <a href="#" class="cta-button">Confirm the meeting →</a>
+      </div>
+      <p>Best,</p>
+      <div class="signature">
+        <div class="name">Sneh</div>
+        <div class="company">LaunchHouse Events</div>
+        <div class="role">Cvent Registration &amp; Event Technology Operations</div>
+        <div><a href="#">calendly.com/launchhouse/30min</a></div>
+        <div><a href="#">www.launchhouse.events</a></div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="row-1">LaunchHouse Events</div>
+      <div class="row-2">Premium Cvent registration operations support — built around your existing event team's workflow.</div>
+      <div class="row-3"><a href="#">www.launchhouse.events</a> &nbsp;·&nbsp; If this is not relevant, reply "not now" and we won't follow up.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- TEMPLATE 12 — POSITIVE INTEREST REPLY          -->
+<!-- ============================================== -->
+
+<section class="template" id="tpl-12">
+  <div class="template-meta">
+    <span class="tplnum">Template 12 · Reply Handler</span>
+    <h3>Positive Interest Reply</h3>
+    <div class="specs">
+      <span class="spec-pill">Header: Slim</span>
+      <span class="spec-pill">CTA: Outline (transitional)</span>
+      <span class="spec-pill">Signature: 5-line</span>
+      <span class="spec-pill">Word count: ~70</span>
+    </div>
+    <div class="subject"><strong>Subject:</strong> Re: Three regional summits this half — note for the Acme Industries event team</div>
+  </div>
+
+  <div class="email">
+    <div class="header-slim">
+      <div class="wordmark">LaunchHouse</div>
+      <div class="support">CVENT REGISTRATION &amp; EVENT TECHNOLOGY OPERATIONS</div>
+    </div>
+    <div class="keyline"></div>
+    <div class="body">
+      <p>Hi Jordan,</p>
+      <p>Glad to hear from you. Two ways forward, whichever fits:</p>
+      <ul class="bullet-list">
+        <li>A 30-minute scoping call to walk through your registration setup and where LaunchHouse would plug in.</li>
+        <li>A short async note from me on the areas we would address first, if email is easier.</li>
+      </ul>
+      <div class="cta-line">
+        <a href="#" class="cta-outline">Open a 30-minute scoping slot →</a>
+      </div>
+      <p>Either works on my end.</p>
+      <p>Best,</p>
+      <div class="signature">
+        <div class="name">Sneh</div>
+        <div class="company">LaunchHouse Events</div>
+        <div class="role">Cvent Registration &amp; Event Technology Operations</div>
+        <div><a href="#">calendly.com/launchhouse/30min</a></div>
+        <div><a href="#">www.launchhouse.events</a></div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="row-1">LaunchHouse Events</div>
+      <div class="row-2">Premium Cvent registration operations support — built around your existing event team's workflow.</div>
+      <div class="row-3"><a href="#">www.launchhouse.events</a> &nbsp;·&nbsp; If this is not relevant, reply "not now" and we won't follow up.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- TEMPLATE 13 — SEND ME MORE INFO REPLY          -->
+<!-- ============================================== -->
+
+<section class="template" id="tpl-13">
+  <div class="template-meta">
+    <span class="tplnum">Template 13 · Reply Handler</span>
+    <h3>Send Me More Info Reply</h3>
+    <div class="specs">
+      <span class="spec-pill">Header: Slim</span>
+      <span class="spec-pill">CTA: Plain link to QA Checklist</span>
+      <span class="spec-pill">Signature: 5-line</span>
+      <span class="spec-pill">Word count: ~95</span>
+    </div>
+    <div class="subject"><strong>Subject:</strong> More on LaunchHouse — operationally</div>
+  </div>
+
+  <div class="email">
+    <div class="header-slim">
+      <div class="wordmark">LaunchHouse</div>
+      <div class="support">CVENT REGISTRATION &amp; EVENT TECHNOLOGY OPERATIONS</div>
+    </div>
+    <div class="keyline"></div>
+    <div class="body">
+      <p>Hi Jordan,</p>
+      <p>Sharing the most useful starting point rather than a generic deck.</p>
+      <p>The Cvent Pre-Launch QA Checklist is the artifact that maps the discipline we would bring to a registration build — from registration paths to reporting readiness:</p>
+      <p><a href="#" class="cta-link">Cvent Pre-Launch QA Checklist →</a></p>
+      <p>For specifics on scope, timing, or how we would plug in, the cleanest path is a short scoping call — calendar link is in the signature below. Happy to stay async if you would rather send the questions in writing.</p>
+      <p>Best,</p>
+      <div class="signature">
+        <div class="name">Sneh</div>
+        <div class="company">LaunchHouse Events</div>
+        <div class="role">Cvent Registration &amp; Event Technology Operations</div>
+        <div><a href="#">calendly.com/launchhouse/30min</a></div>
+        <div><a href="#">www.launchhouse.events</a></div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="row-1">LaunchHouse Events</div>
+      <div class="row-2">Premium Cvent registration operations support — built around your existing event team's workflow.</div>
+      <div class="row-3"><a href="#">www.launchhouse.events</a> &nbsp;·&nbsp; If this is not relevant, reply "not now" and we won't follow up.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- TEMPLATE 14 — NOT NOW REPLY                    -->
+<!-- ============================================== -->
+
+<section class="template" id="tpl-14">
+  <div class="template-meta">
+    <span class="tplnum">Template 14 · Reply Handler</span>
+    <h3>Not Now Reply (planning-mode variant)</h3>
+    <div class="specs">
+      <span class="spec-pill">Header: Slim</span>
+      <span class="spec-pill">CTA: Plain link (optional)</span>
+      <span class="spec-pill">Signature: Compact 3-line</span>
+      <span class="spec-pill">Word count: ~70</span>
+    </div>
+    <div class="subject"><strong>Subject:</strong> Re: Three regional summits this half — note for the Acme Industries event team</div>
+  </div>
+
+  <div class="email">
+    <div class="header-slim">
+      <div class="wordmark">LaunchHouse</div>
+      <div class="support">CVENT REGISTRATION &amp; EVENT TECHNOLOGY OPERATIONS</div>
+    </div>
+    <div class="keyline"></div>
+    <div class="body">
+      <p>Hi Jordan,</p>
+      <p>Appreciate the note. Timing matters.</p>
+      <p>If LaunchHouse becomes useful when the next build window opens, the door is open — no need for a follow-up from me until you are ready.</p>
+      <p>If a planning checklist would help in the meantime, the Cvent Pre-Launch QA Checklist is here:<br><a href="#" class="cta-link">Cvent Pre-Launch QA Checklist →</a></p>
+      <p>Best,</p>
+      <div class="signature">
+        <div class="name">Sneh</div>
+        <div class="company">LaunchHouse Events</div>
+        <div class="role">Cvent Registration &amp; Event Technology Operations</div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="row-1">LaunchHouse Events</div>
+      <div class="row-2">Premium Cvent registration operations support — built around your existing event team's workflow.</div>
+      <div class="row-3"><a href="#">www.launchhouse.events</a> &nbsp;·&nbsp; If this is not relevant, reply "not now" and we won't follow up.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- TEMPLATE 15 — ALREADY HAVE SUPPORT REPLY       -->
+<!-- ============================================== -->
+
+<section class="template" id="tpl-15">
+  <div class="template-meta">
+    <span class="tplnum">Template 15 · Reply Handler</span>
+    <h3>Already Have Support Reply</h3>
+    <div class="specs">
+      <span class="spec-pill">Header: Slim</span>
+      <span class="spec-pill">CTA: None</span>
+      <span class="spec-pill">Signature: Compact 3-line</span>
+      <span class="spec-pill">Word count: ~65</span>
+    </div>
+    <div class="subject"><strong>Subject:</strong> Re: Three regional summits this half — note for the Acme Industries event team</div>
+  </div>
+
+  <div class="email">
+    <div class="header-slim">
+      <div class="wordmark">LaunchHouse</div>
+      <div class="support">CVENT REGISTRATION &amp; EVENT TECHNOLOGY OPERATIONS</div>
+    </div>
+    <div class="keyline"></div>
+    <div class="body">
+      <p>Hi Jordan,</p>
+      <p>Makes sense. A team that already has trusted Cvent support is exactly the kind of team LaunchHouse is least likely to disrupt.</p>
+      <p>Where we tend to be useful is the overflow layer — the weeks when build queues compress, an event stacks against another internal priority, or last-mile QA needs a second set of eyes without creating another heavy workstream.</p>
+      <p>If that ever fits, the door is open. No follow-up from me before then.</p>
+      <p>Best,</p>
+      <div class="signature">
+        <div class="name">Sneh</div>
+        <div class="company">LaunchHouse Events</div>
+        <div class="role">Cvent Registration &amp; Event Technology Operations</div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="row-1">LaunchHouse Events</div>
+      <div class="row-2">Premium Cvent registration operations support — built around your existing event team's workflow.</div>
+      <div class="row-3"><a href="#">www.launchhouse.events</a> &nbsp;·&nbsp; If this is not relevant, reply "not now" and we won't follow up.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- TEMPLATE 16 — WRONG CONTACT / REFERRAL ASK     -->
+<!-- ============================================== -->
+
+<section class="template" id="tpl-16">
+  <div class="template-meta">
+    <span class="tplnum">Template 16 · Reply Handler</span>
+    <h3>Wrong Contact / Referral Ask</h3>
+    <div class="specs">
+      <span class="spec-pill">Header: Slim</span>
+      <span class="spec-pill">CTA: None (two-option prose)</span>
+      <span class="spec-pill">Signature: Compact 3-line</span>
+      <span class="spec-pill">Word count: ~65</span>
+    </div>
+    <div class="subject"><strong>Subject:</strong> Re: Three regional summits this half — note for the Acme Industries event team</div>
+  </div>
+
+  <div class="email">
+    <div class="header-slim">
+      <div class="wordmark">LaunchHouse</div>
+      <div class="support">CVENT REGISTRATION &amp; EVENT TECHNOLOGY OPERATIONS</div>
+    </div>
+    <div class="keyline"></div>
+    <div class="body">
+      <p>Hi Jordan,</p>
+      <p>Appreciate the redirect.</p>
+      <p>Two ways to handle, whichever is easier on your side:</p>
+      <ul class="bullet-list">
+        <li>Send me their name and I will reach out directly with you copied (no need for a formal intro).</li>
+        <li>Or just forward this thread to them if that is faster on your end.</li>
+      </ul>
+      <p>Either works. Thanks for pointing me in the right direction.</p>
+      <p>Best,</p>
+      <div class="signature">
+        <div class="name">Sneh</div>
+        <div class="company">LaunchHouse Events</div>
+        <div class="role">Cvent Registration &amp; Event Technology Operations</div>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="row-1">LaunchHouse Events</div>
+      <div class="row-2">Premium Cvent registration operations support — built around your existing event team's workflow.</div>
+      <div class="row-3"><a href="#">www.launchhouse.events</a> &nbsp;·&nbsp; If this is not relevant, reply "not now" and we won't follow up.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== -->
+<!-- BOTTOM NOTE                                    -->
+<!-- ============================================== -->
+
+<div class="bottom-note">
+  <strong>About this file</strong>
+  This is a visual preview of all 16 approved LaunchHouse Events email templates in the Operations Strip design system. It is intended for design review and stakeholder approval, not as production HTML email code. Production HTML must use table-based layouts, inline CSS, and Outlook-specific MSO conditional comments — produced separately during the CTO implementation per <code>07_Email_Implementation_For_CTO/02_Em

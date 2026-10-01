@@ -31,14 +31,16 @@ An enterprise-grade platform that combines AI-powered research, lead enrichment,
 
 ## Key Features
 
-- **AI Research Agents** — Automated company & contact research via SerpAPI, Firecrawl, Tavily
-- **Intelligent Lead Scoring** — 10-signal weighted scoring with hot/warm/cold classification
-- **Hyper-Personalized Emails** — GPT-4o generated with Hook→Insight→Value→CTA framework
-- **Reply Analysis** — Automatic intent detection (9 categories), sentiment, and suggested responses
-- **Multi-Channel Ready** — Email now, extensible to LinkedIn, WhatsApp, SMS
-- **Campaign Automation** — Multi-step sequences with scheduling, throttling, and follow-up logic
-- **Multi-Tenant** — Row-level security, per-tenant isolation
-- **Event-Driven** — Redis Streams event bus with 40+ event types
+- **Evidence-Based Lead Intelligence (v3)** — A six-stage agent pipeline (identity → event fit → pressure → targeted research → synthesis → outreach) scores leads against auditable `EvidenceItem` citations rather than an opaque number. Weighted scoring applies anti-gaming caps and requires a compound gate of ≥2 independently strong signals before a lead is classified "hot."
+- **Autonomous Outreach Loop** — A Celery-scheduled loop scores candidate leads, plans a multi-step campaign, and generates step-0 emails end to end, with no human in the loop unless test mode is on.
+- **Dual AI QA Gate on Every Email** — Generated subject lines and bodies are scored by an LLM reviewer against a fixed rubric (subject ≥75/100, body ≥70/100) before send, with up to 3 regenerate attempts and rubric-driven rewrite suggestions.
+- **Weekly Strategy Feedback Loop** — A weekly job aggregates open/reply-rate performance by messaging angle, has an LLM synthesize what's working, and injects those learnings into the next campaign's email generation as strategy context.
+- **Human-Paced Sending** — Business-hour/business-day send windows plus a randomized 5–10 minute pre-send delay avoid bulk-sender patterns; sender accounts rotate by least-loaded, capped by daily limits.
+- **Cost-Controlled Research** — The targeted-research agent multiplexes multiple providers (Tavily, SerpAPI, Perplexity, Firecrawl) behind a daily spend budget and a negative cache so known dead-end leads aren't re-queried.
+- **Reply Analysis** — Automatic intent detection, sentiment, and suggested responses from inbound replies (IMAP polling + SendGrid webhooks).
+- **Self-Built Health Monitoring** — A periodic health-check task watches sender/provider connectivity and writes alerts the admin dashboard surfaces, plus an LLM-powered ops chatbot that can query live Docker/DB/Redis/Celery health conversationally.
+- **Multi-Tenant** — Row-level tenant isolation across leads, campaigns, and sender accounts.
+- **Test Mode** — Full dry-run path (redirected sends, collapsed delays, tagged campaigns) so the autonomous loop can be exercised safely before going live.
 
 ## Tech Stack
 
@@ -46,28 +48,31 @@ An enterprise-grade platform that combines AI-powered research, lead enrichment,
 |---------------|--------------------------------------------------------|
 | Frontend      | Next.js 14, React 18, Tailwind CSS, shadcn/ui, Zustand |
 | Backend       | Python 3.12, FastAPI, SQLAlchemy 2.0 (async), Pydantic v2 |
-| AI / LLM      | LangChain, LangGraph, GPT-4o, Claude 3.5 Sonnet       |
+| AI / LLM      | GPT-4o / GPT-4o-mini and Claude 3.5 Sonnet / Haiku, used per-agent depending on task cost/quality tradeoff |
 | Database      | PostgreSQL 16, PGVector (embeddings), pg_trgm          |
 | Queue / Cache | Redis 7, Celery 5.4                                   |
-| Infrastructure| Docker, Kubernetes (EKS), GitHub Actions CI/CD         |
-| Monitoring    | Prometheus, Grafana, Sentry, structlog                 |
+| Infrastructure| Docker Compose on a Hetzner VPS (production), Caddy reverse proxy + TLS; Kubernetes manifests available under `infra/k8s/` for teams that want to run on EKS instead |
+| Monitoring    | Self-built health-check task + admin alert dashboard + LLM ops chatbot; optional Sentry and Prometheus hooks exist in `main.py` for teams that wire them up |
 
 ## Project Structure
 
 ```
-├── docs/                          # Architecture documentation (12 files)
+├── docs/                          # Architecture & strategy documentation
 │   ├── 01-PRODUCT-VISION.md
 │   ├── 02-SYSTEM-ARCHITECTURE.md
 │   ├── 03-CORE-MODULES.md
-│   ├── 04-AI-AGENTS.md
-│   ├── 05-DATABASE-SCHEMA.md
-│   ├── 06-API-SPECIFICATION.md
-│   ├── 07-EVENT-WORKFLOW-AUTOMATION.md
-│   ├── 08-UI-WIREFRAMES.md
+│   ├── 04-AI-AGENT-ARCHITECTURE.md
+│   ├── 05-DATA-MODEL.md
+│   ├── 06-API-ARCHITECTURE.md
+│   ├── 07-EVENT-WORKFLOWS.md
+│   ├── 08-UI-DESIGN.md
 │   ├── 09-DEVELOPMENT-PLAN.md
 │   ├── 10-SCALING-STRATEGY.md
-│   ├── 11-SECURITY-MODEL.md
-│   └── 12-FUTURE-EXPANSION.md
+│   ├── 11-SECURITY-AND-MONITORING.md
+│   ├── 12-FUTURE-EXPANSION.md
+│   ├── Campaign_Email_Strategy.md     # Email generation + QA rubric design
+│   ├── Lead_Enrichment_Strategy.md    # v3 evidence-based scoring design
+│   └── remote-deployment-runbook.md   # Production deploy/runbook steps
 ├── backend/
 │   ├── app/
 │   │   ├── main.py                # FastAPI app factory
@@ -76,10 +81,12 @@ An enterprise-grade platform that combines AI-powered research, lead enrichment,
 │   │   ├── db/                    # Database engine & base models
 │   │   ├── models/                # SQLAlchemy models (tenant, lead, campaign)
 │   │   ├── schemas/               # Pydantic request/response schemas
-│   │   ├── api/                   # API routes (10 router modules)
+│   │   ├── api/routes/            # API routes (admin, analytics, campaigns, chat, leads, replies, webhooks, …)
 │   │   ├── services/              # Business logic (auth, lead, campaign, enrichment)
-│   │   ├── agents/                # AI agents (research, enrichment, scoring, personalization, reply analysis)
-│   │   ├── tasks/                 # Celery tasks (enrichment, campaign, email)
+│   │   ├── agents/                # AI agents — orchestrator, personalization, reply analysis,
+│   │   │                          #   legacy signal-based scorer, and the v3/ evidence pipeline
+│   │   │                          #   (identity, event_fit, pressure, targeted_research, synthesis, outreach)
+│   │   ├── tasks/                 # Celery tasks (orchestrator loop, campaign follow-ups, email send, enrichment)
 │   │   ├── middleware/            # Rate limit, tenant, logging
 │   │   └── events/               # Redis Streams event bus
 │   ├── alembic/                   # Database migrations
@@ -223,39 +230,61 @@ curl http://localhost:8000/api/v1/leads \
 
 ## Deployment
 
-### Staging / Production (Kubernetes)
+### Production (current: Docker Compose on a single VPS)
+
+Production runs on a Hetzner VPS via Docker Compose, not Kubernetes:
 
 ```bash
-# Configure kubectl for your EKS cluster
+ssh -i ~/.ssh/id_ed25519 deploy@<prod-host>
+cd /opt/outreachai
+git pull origin feat/v3-event-intelligence
+docker stop outreachai-api outreachai-celery-worker
+docker rm outreachai-api outreachai-celery-worker
+docker compose -f docker-compose.prod.yml --env-file .env.prod build api celery-worker
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+```
+
+Caddy handles the reverse proxy and TLS termination (`Caddyfile`); reload after config changes with:
+
+```bash
+docker exec outreachai-caddy caddy reload --config /etc/caddy/Caddyfile
+```
+
+Full step-by-step runbook: [docs/remote-deployment-runbook.md](docs/remote-deployment-runbook.md).
+
+### Alternative: Kubernetes
+
+Manifests for an EKS-style deployment are available under `infra/k8s/` if you'd rather run on Kubernetes:
+
+```bash
 aws eks update-kubeconfig --name outreachai-prod
-
-# Apply manifests
 kubectl apply -f infra/k8s/
-
-# Check rollout
 kubectl rollout status deployment/api -n outreachai
 ```
 
-CI/CD via GitHub Actions automatically builds, tests, and deploys to staging on merge to `main`.
+CI/CD via GitHub Actions builds and tests on every push (`.github/workflows/ci.yml`); deployment itself is currently manual via the Compose flow above.
 
 ## Documentation
 
-Comprehensive architecture documentation is in the `docs/` directory:
+Architecture and strategy documentation lives in the `docs/` directory:
 
 | Doc | Description |
 |-----|-------------|
 | [01-PRODUCT-VISION](docs/01-PRODUCT-VISION.md) | Mission, target users, competitive positioning |
 | [02-SYSTEM-ARCHITECTURE](docs/02-SYSTEM-ARCHITECTURE.md) | Service topology, data flow, infrastructure |
-| [03-CORE-MODULES](docs/03-CORE-MODULES.md) | 19 module specifications with interfaces |
-| [04-AI-AGENTS](docs/04-AI-AGENTS.md) | 7 AI agents with LangGraph graphs & prompts |
-| [05-DATABASE-SCHEMA](docs/05-DATABASE-SCHEMA.md) | 25+ tables with indexes, RLS, partitioning |
-| [06-API-SPECIFICATION](docs/06-API-SPECIFICATION.md) | 100+ REST endpoints with schemas |
-| [07-EVENT-WORKFLOW-AUTOMATION](docs/07-EVENT-WORKFLOW-AUTOMATION.md) | Event bus, 40+ events, Celery task flows |
-| [08-UI-WIREFRAMES](docs/08-UI-WIREFRAMES.md) | 8 page wireframes with component specs |
-| [09-DEVELOPMENT-PLAN](docs/09-DEVELOPMENT-PLAN.md) | 6-phase roadmap (~22 weeks) |
-| [10-SCALING-STRATEGY](docs/10-SCALING-STRATEGY.md) | DB, cache, workers, K8s scaling guides |
-| [11-SECURITY-MODEL](docs/11-SECURITY-MODEL.md) | 6-layer security, OWASP, JWT RS256 |
+| [03-CORE-MODULES](docs/03-CORE-MODULES.md) | Module specifications with interfaces |
+| [04-AI-AGENT-ARCHITECTURE](docs/04-AI-AGENT-ARCHITECTURE.md) | AI agents, LangGraph graphs & prompts |
+| [05-DATA-MODEL](docs/05-DATA-MODEL.md) | Database schema, indexes, RLS |
+| [06-API-ARCHITECTURE](docs/06-API-ARCHITECTURE.md) | REST endpoint design |
+| [07-EVENT-WORKFLOWS](docs/07-EVENT-WORKFLOWS.md) | Event bus, Celery task flows |
+| [08-UI-DESIGN](docs/08-UI-DESIGN.md) | Page layouts and component specs |
+| [09-DEVELOPMENT-PLAN](docs/09-DEVELOPMENT-PLAN.md) | Phased roadmap |
+| [10-SCALING-STRATEGY](docs/10-SCALING-STRATEGY.md) | DB, cache, worker scaling guides |
+| [11-SECURITY-AND-MONITORING](docs/11-SECURITY-AND-MONITORING.md) | Security model, monitoring approach |
 | [12-FUTURE-EXPANSION](docs/12-FUTURE-EXPANSION.md) | WhatsApp, LinkedIn, SMS, CRM integrations |
+| [Campaign_Email_Strategy](docs/Campaign_Email_Strategy.md) | Email generation flow, QA rubric, CTA design |
+| [Lead_Enrichment_Strategy](docs/Lead_Enrichment_Strategy.md) | v3 evidence-based scoring pipeline design |
+| [remote-deployment-runbook](docs/remote-deployment-runbook.md) | Production deploy steps for the live VPS |
 
 ## License
 

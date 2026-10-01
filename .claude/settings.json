@@ -153,7 +153,10 @@
       "Bash(ssh root@65.108.51.28 \"cd /opt/outreachai && docker compose -f docker-compose.prod.yml --env-file .env.prod up -d api frontend 2>&1 | tail -10\")",
       "Bash(ssh root@65.108.51.28 \"docker exec outreachai-api env | grep DATABASE_URL\")",
       "Bash(ssh root@65.108.51.28 \"until docker inspect outreachai-api --format '{{.State.Health.Status}}' | grep -qE '^healthy$'; do sleep 3; done && curl -s http://172.18.0.4:8000/api/v1/system/health | python3 -c 'import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d[\\\\\"data\\\\\"], indent=2\\)\\)'\")",
-      "Bash(ssh root@65.108.51.28 *)"
+      "Bash(ssh root@65.108.51.28 *)",
+      "Bash(ssh -i ~/.ssh/id_ed25519 root@65.108.51.28 'docker exec outreachai-postgres psql -U outreach -d outreachai -c \" *)",
+      "Bash(ssh -i ~/.ssh/id_ed25519 root@65.108.51.28 \"sleep 5 && docker exec outreachai-api env | grep -E 'EMAIL_DEFAULT_FROM_NAME|SENDER_CALENDAR_LINK|SENDER_FIRST_NAME'\")",
+      "Bash(ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 root@65.108.51.28 \"cd /opt/outreachai && git log --oneline -5\")"
     ],
     "additionalDirectories": [
       "/tmp"

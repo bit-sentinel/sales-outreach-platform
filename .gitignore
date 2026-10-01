@@ -57,3 +57,9 @@ alembic/versions/*.pyc
 # Celery
 celerybeat-schedule
 celerybeat.pid
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Local scrape/research cache
+.firecrawl/

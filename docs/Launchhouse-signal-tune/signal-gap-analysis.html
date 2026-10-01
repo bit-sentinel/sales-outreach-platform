@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Signal-Tune v2 — Gap Analysis</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --ink:       #0f1724;
+    --ink-mid:   #2d3a4f;
+    --ink-soft:  #5a6a82;
+    --ink-muted: #8a99ad;
+    --rule:      #e4e9f0;
+    --surface:   #f7f9fc;
+    --white:     #ffffff;
+
+    --accent:    #1a56db;
+    --accent-lt: #eef3fd;
+    --green:     #0d7a5f;
+    --green-lt:  #e8f7f3;
+    --amber:     #b45309;
+    --amber-lt:  #fef9ec;
+    --red:       #c8193c;
+    --red-lt:    #fdf0f3;
+    --violet:    #5b21b6;
+    --violet-lt: #f3effe;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { font-size: 10.5pt; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--white);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── Page layout ─────────────────────────────────────── */
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    padding: 14mm 16mm 14mm 16mm;
+  }
+
+  @media print {
+    .page { margin: 0; padding: 12mm 15mm; }
+    .page-break { page-break-before: always; }
+  }
+
+  /* ── Cover ───────────────────────────────────────────── */
+  .cover {
+    display: flex;
+    flex-direction: column;
+    min-height: 260mm;
+    background: linear-gradient(145deg, #0b1a30 0%, #132d52 60%, #1a4880 100%);
+    border-radius: 12px;
+    padding: 52px 52px 44px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cover::before {
+    content: '';
+    position: absolute;
+    right: -60px; top: -60px;
+    width: 340px; height: 340px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(99,179,237,0.12) 0%, transparent 70%);
+  }
+
+  .cover::after {
+    content: '';
+    position: absolute;
+    left: 0; bottom: 0;
+    width: 100%; height: 3px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
+  }
+
+  .cover-eyebrow {
+    font-size: 8pt;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.45);
+    margin-bottom: 40px;
+  }
+
+  .cover-title {
+    font-size: 32pt;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    color: #fff;
+    max-width: 520px;
+  }
+
+  .cover-title span {
+    background: linear-gradient(90deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .cover-subtitle {
+    margin-top: 18px;
+    font-size: 11.5pt;
+    color: rgba(255,255,255,0.55);
+    font-weight: 400;
+    max-width: 460px;
+    line-height: 1.65;
+  }
+
+  .cover-meta {
+    margin-top: auto;
+    padding-top: 40px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .cover-meta-item label {
+    display: block;
+    font-size: 7.5pt;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 4px;
+  }
+
+  .cover-meta-item span {
+    font-size: 9.5pt;
+    font-weight: 500;
+    color: rgba(255,255,255,0.75);
+  }
+
+  .cover-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(99,179,237,0.15);
+    border: 1px solid rgba(99,179,237,0.3);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 8pt;
+    font-weight: 600;
+    color: #93c5fd;
+    margin-bottom: 24px;
+  }
+
+  .cover-badge .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #60a5fa;
+  }
+
+  /* ── Section headings ────────────────────────────────── */
+  .section-label {
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  h2 {
+    font-size: 17pt;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+
+  h3 {
+    font-size: 11pt;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+
+  .section-intro {
+    font-size: 9.5pt;
+    color: var(--ink-soft);
+    line-height: 1.7;
+    max-width: 600px;
+    margin-bottom: 24px;
+  }
+
+  /* ── Callout banner ──────────────────────────────────── */
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-lt);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    margin-bottom: 28px;
+  }
+
+  .callout-label {
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  .callout p {
+    font-size: 9.5pt;
+    color: var(--ink-mid);
+    line-height: 1.65;
+    font-style: italic;
+  }
+
+  /* ── Divider ─────────────────────────────────────────── */
+  .divider {
+    height: 1px;
+    background: var(--rule);
+    margin: 30px 0;
+  }
+
+  /* ── Tables ──────────────────────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.5pt;
+    margin-bottom: 6px;
+  }
+
+  thead tr {
+    background: var(--ink);
+    color: white;
+  }
+
+  thead th {
+    padding: 9px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 8pt;
+    letter-spacing: 0.04em;
+  }
+
+  thead th:first-child { border-radius: 7px 0 0 0; }
+  thead th:last-child  { border-radius: 0 7px 0 0; }
+
+  tbody tr:nth-child(even) { background: var(--surface); }
+  tbody tr:nth-child(odd)  { background: var(--white); }
+
+  tbody tr:hover { background: var(--accent-lt); }
+
+  tbody td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+    line-height: 1.55;
+    color: var(--ink-mid);
+  }
+
+  tbody td:first-child { color: var(--ink); font-weight: 500; }
+
+  .table-caption {
+    font-size: 7.5pt;
+    color: var(--ink-muted);
+    margin-top: 4px;
+    margin-bottom: 22px;
+    font-style: italic;
+  }
+
+  /* ── Status badges ───────────────────────────────────── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 20px;
+    padding: 2px 8px;
+    font-size: 7.5pt;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .badge::before {
+    content: '';
+    display: inline-block;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+  }
+
+  .badge-missing  { background: var(--red-lt);    color: var(--red);    }
+  .badge-missing::before  { background: var(--red); }
+
+  .badge-partial  { background: var(--amber-lt);  color: var(--amber);  }
+  .badge-partial::before  { background: var(--amber); }
+
+  .badge-aligned  { background: var(--green-lt);  color: var(--green);  }
+  .badge-aligned::before  { background: var(--green); }
+
+  .badge-present  { background: var(--green-lt);  color: var(--green);  }
+  .badge-present::before  { background: var(--green); }
+
+  /* ── Priority cards ──────────────────────────────────── */
+  .priority-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .priority-card {
+    border-radius: 10px;
+    padding: 16px 18px;
+    border: 1px solid var(--rule);
+  }
+
+  .priority-card.high   { border-left: 4px solid var(--red);    background: var(--red-lt);    }
+  .priority-card.medium { border-left: 4px solid var(--amber);  background: var(--amber-lt);  }
+  .priority-card.low    { border-left: 4px solid var(--green);  background: var(--green-lt);  }
+
+  .priority-tag {
+    font-size: 7pt;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .priority-card.high   .priority-tag { color: var(--red);   }
+  .priority-card.medium .priority-tag { color: var(--amber); }
+  .priority-card.low    .priority-tag { color: var(--green); }
+
+  .priority-card h4 {
+    font-size: 9.5pt;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 5px;
+  }
+
+  .priority-card p {
+    font-size: 8.5pt;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+
+  /* ── Signal weight comparison ────────────────────────── */
+  .signal-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    border: 1px solid var(--rule);
+    background: var(--white);
+  }
+
+  .signal-row:nth-child(even) { background: var(--surface); }
+
+  .signal-name {
+    flex: 1;
+    font-size: 8.5pt;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .weight-block {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 180px;
+  }
+
+  .weight-label {
+    font-size: 7.5pt;
+    color: var(--ink-muted);
+    width: 50px;
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .weight-bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .weight-bar { height: 100%; border-radius: 4px; }
+  .bar-current { background: #94a3b8; }
+  .bar-new     { background: var(--accent); }
+
+  .weight-pct {
+    font-size: 7.5pt;
+    font-weight: 700;
+    width: 28px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .weight-pct.up   { color: var(--accent); }
+  .weight-pct.down { color: var(--ink-muted); }
+  .weight-pct.new  { color: var(--green); }
+
+  /* ── QA scenarios ────────────────────────────────────── */
+  .qa-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .qa-card {
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 14px;
+    background: var(--white);
+  }
+
+  .qa-id {
+    font-size: 7pt;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 5px;
+  }
+
+  .qa-scenario {
+    font-size: 8pt;
+    color: var(--ink);
+    font-weight: 500;
+    line-height: 1.5;
+    margin-bottom: 8px;
+  }
+
+  .qa-tier {
+    display: inline-block;
+    font-size: 7.5pt;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+
+  .tier-hot  { background: #fef2f2; color: #dc2626; }
+  .tier-warm { background: #fffbeb; color: #d97706; }
+  .tier-cold { background: #f1f5f9; color: #64748b; }
+
+  /* ── Footer ──────────────────────────────────────────── */
+  .footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 7.5pt;
+    color: var(--ink-muted);
+  }
+
+  .footer-logo {
+    font-weight: 700;
+    color: var(--ink-soft);
+    letter-spacing: -0.01em;
+  }
+
+  /* ── Utility ─────────────────────────────────────────── */
+  .mt-6  { margin-top: 6px;  }
+  .mt-12 { margin-top: 12px; }
+  .mt-20 { margin-top: 20px; }
+  .mt-28 { margin-top: 28px; }
+  .mb-8  { margin-bottom: 8px; }
+  .mb-16 { margin-bottom: 16px; }
+  .mono  { font-family: 'JetBrains Mono', monospace; font-size: 8pt; }
+
+  .highlight-red    { color: var(--red);   font-weight: 600; }
+  .highlight-green  { color: var(--green); font-weight: 600; }
+  .highlight-amber  { color: var(--amber); font-weight: 600; }
+  .highlight-accent { color: var(--accent); font-weight: 600; }
+
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8pt;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1px 5px;
+    color: var(--ink-mid);
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 1 — COVER
+══════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="cover">
+    <div class="cover-eyebrow">LaunchHouse Events · Engineering Review</div>
+
+    <div class="cover-badge">
+      <span class="dot"></span>
+      market_signals_v2_2026_05
+    </div>
+
+    <div class="cover-title">
+      Signal-Tune v2<br/>
+      <span>Gap Analysis</span>
+    </div>
+
+    <div class="cover-subtitle">
+      A structured comparison of the current pipeline implementation against the
+      LaunchHouse v2 market-signals scoring model — identifying what exists,
+      what is missing, and what must change to reach acceptance criteria.
+    </div>
+
+    <div class="cover-meta">
+      <div class="cover-meta-item">
+        <label>Prepared</label>
+        <span>May 17, 2026</span>
+      </div>
+      <div class="cover-meta-item">
+        <label>Audience</label>
+        <span>Engineering Leadership</span>
+      </div>
+      <div class="cover-meta-item">
+        <label>Source of truth</label>
+        <span>LaunchHouse Signal-Tune v2 PDF + SUMMARY.md</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Executive summary -->
+  <div class="mt-28">
+    <div class="section-label">Executive Summary</div>
+    <h2>Three agents. Five gaps. One scoring model that needs a full replacement.</h2>
+    <p class="section-intro">
+      The current four-agent pipeline (Research → Enrichment → Scoring → Personalization) is structurally
+      sound but calibrated to an outdated 6-signal, firmographic-heavy scoring model. The v2 model
+      introduced by LaunchHouse inverts the weight distribution — moving mass from static company
+      attributes toward dynamic operational signals. The majority of required changes are
+      <strong>prompt and config only</strong>; no schema migrations are needed.
+    </p>
+  </div>
+
+  <div class="callout">
+    <div class="callout-label">Core Strategic Shift</div>
+    <p>
+      "Your agent should not ask: 'Who uses Cvent?' It should ask: 'Which Cvent-using event team
+      has a real operating reason to need execution help <em>now</em>?' Cvent usage is a gate,
+      not a signal. Scores should reflect compound evidence of operational pressure."
+    </p>
+  </div>
+
+  <!-- Impact summary grid -->
+  <div class="priority-grid">
+    <div class="priority-card high">
+      <div class="priority-tag">Critical · Fix Now</div>
+      <h4>Scoring Model — Full Replacement</h4>
+      <p>6-signal prompt must be replaced with the v2 8-signal model including 7 hard caps and a compound-evidence Hot gate.</p>
+    </div>
+    <div class="priority-card high">
+      <div class="priority-tag">Critical · Fix Now</div>
+      <h4>4 Research Query Sets Missing</h4>
+      <p>Hiring (ATS-targeted), Cvent complexity, MarTech pressure, and Cvent Certified are not queried at all today.</p>
+    </div>
+    <div class="priority-card high">
+      <div class="priority-tag">Critical · Fix Now</div>
+      <h4>Enrichment Output Schema Incomplete</h4>
+      <p>5 structured signal blocks required by v2 are absent from EnrichmentAgent output: hiring signals, complexity, certified profile, capacity stress index, source confidence.</p>
+    </div>
+    <div class="priority-card medium">
+      <div class="priority-tag">Medium · Phase 4</div>
+      <h4>PersonalizationAgent Routing</h4>
+      <p>No structured routing table exists. <code>recommended_template_driver</code> and 4 hook fields are not written to <code>personalization_hooks</code>.</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="footer-logo">LaunchHouse Signal-Tune v2 · Gap Analysis</span>
+    <span>Page 1 of 4</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 2 — SCORING MODEL COMPARISON
+══════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-label">Section 1 — Scoring Agent</div>
+  <h2>The scoring model needs to be replaced, not tuned.</h2>
+  <p class="section-intro">
+    The current <code>SCORING_SYSTEM_PROMPT</code> defines 6 signals summing to 1.0 weight.
+    The v2 model defines 8 signals, rebalances every weight, introduces 7 hard score caps,
+    and adds a compound-evidence gate that prevents a single weak signal from producing a Hot lead.
+  </p>
+
+  <!-- Signal weight visual comparison -->
+  <h3>Signal Weight Redistribution</h3>
+
+  <div class="signal-row">
+    <div class="signal-name">Verified Upcoming Event Urgency</div>
+    <div class="weight-block">
+      <span class="weight-label">Current</span>
+      <div class="weight-bar-wrap"><div class="weight-bar bar-current" style="width:25%"></div></div>
+      <span class="weight-pct down">25%</span>
+    </div>
+    <div class="weight-block">
+      <span class="weight-label">v2 Target</span>
+      <div class="weight-bar-wrap"><div class="weight-bar bar-new" style="width:24%"></div></div>
+      <span class="weight-pct up">24%</span>
+    </div>
+    <span class="badge badge-partial">Partial</span>
+  </div>
+
+  <div class="signal-row">
+    <div class="signal-name">Event / Cvent Hiring &amp; Capacity Gap</div>
+    <div class="weight-block">
+      <span class="weight-label">Current</span>
+      <div class="weight-bar-wrap"><div class="weight-bar bar-current" style="width:15%"></div></div>
+      <span class="weight-pct down">~15%</span>
+    </div>
+    <div class="weight-block">
+      <span class="weight-label">v2 Target</span>
+      <div class="weight-bar-wrap"><div class="weight-bar bar-new" style="width:20%"></div></div>
+      <span class="weight-pct up">20%</span>
+    </div>
+    <span class="badge badge-partial">Partial</span>
+  </div>
+
+  <div class="signal-row">
+    <div class="signal-name">Cvent Complexity / Advanced Module Usage</div>
+    <div class="weight-block">
+      <span class="weight-label">Current</span>
+      <div class="weight-bar-wrap"><div class="weight-bar bar-current" style="width:0%"></div></div>
+      <span class="weight-pct down">0%</span>
+    </div>
+    <div class="weight-block">
+      <span class="weight-label">v2 Target</span>
+      <div class="weight-bar-wrap"><div class="weight-bar bar-new" style="width:16%"></div></div>
+      <span class="weight-pct new">16%</span>
+    </div>
+    <span class="badge badge-missing">Missing</span>
+  </div>
+
+  <div class="signal-row">
+    <div class="signal-name">MarTech, Reporting &amp; Data Pressure</div>
+    <div class="weight-block">
+      <span class="weight-label">Current</span>
+      <div class="weight-bar-wrap"><div class="weight-bar bar-current" style="width:0%"></div></div>
+      <span class="weight-pct down">0%</span>
+    </div>
+    <div class="weight-block">
+      <span class="weight-label">v2 Target</span>
+      <div class="weight-bar-wrap"><div class="weight-bar bar-new" style="width:14%"></div></div>
+      <span class="weight-pct new">14%</span>
+    </div>
+    <span class="badge badge-missing">Missing</span>
+  </div>
+
+  <div class="signal-row">
+    <div class="signal-name">Buyer / Persona Authority</div>
+    <div class="weight-block">
+      <span class="weight-label">Current</span>
+      <div class="weight-bar-wrap"><div class="weight-bar bar-current" style="width:20%"></div></div>
+      <span class="weight-pct down">20%</span>
+    </div>
+    <div class="weight-block">
+      <span class="weight-label">v2 Target</span>
+      <div class="weight-bar-wrap"><div class="weight-bar bar-new" style="width:12%"></div></div>
+      <span class="weight-pct up">12%</span>
+    </div>
+    <span class="badge badge-partial">Overweighted</span>
+  </div>
+
+  <div class="signal-row">
+    <div class="signal-name">Event Program + Industry Pattern</div>
+    <div class="weight-block">
+      <span class="weight-label">Current</span>
+      <div class="weight-bar-wrap"><div class="weight-bar bar-current" style="width:25%"></div></div>
+      <span class="weight-pct down">25%</span>
+    </div>
+    <div class="weight-block">
+      <span class="weight-label">v2 Target</span>
+      <div class="weight-bar-wrap"><div class="weight-bar bar-new" style="width:9%"></div></div>
+      <span class="weight-pct up">9%</span>
+    </div>
+    <span class="badge badge-partial">Overweighted</span>
+  </div>
+
+  <div class="signal-row">
+    <div class="signal-name">Company Fit / Budget Maturity <em>(guardrail only)</em></div>
+    <div class="weight-block">
+      <span class="weight-label">Current</span>
+      <div class="weight-bar-wrap"><div class="weight-bar bar-current" style="width:15%"></div></div>
+      <span class="weight-pct down">15%</span>
+    </div>
+    <div class="weight-block">
+      <span class="weight-label">v2 Target</span>
+      <div class="weight-bar-wrap"><div class="weight-bar bar-new" style="width:4%"></div></div>
+      <span class="weight-pct up">4%</span>
+    </div>
+    <span class="badge badge-partial">Overweighted ×4</span>
+  </div>
+
+  <div class="signal-row">
+    <div class="signal-name">Cvent Certified Profile Signal <em>(bonus only)</em></div>
+    <div class="weight-block">
+      <span class="weight-label">Current</span>
+      <div class="weight-bar-wrap"><div class="weight-bar bar-current" style="width:0%"></div></div>
+      <span class="weight-pct down">0%</span>
+    </div>
+    <div class="weight-block">
+      <span class="weight-label">v2 Target</span>
+      <div class="weight-bar-wrap"><div class="weight-bar bar-new" style="width:1%"></div></div>
+      <span class="weight-pct new">1%</span>
+    </div>
+    <span class="badge badge-missing">Missing</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Score caps -->
+  <h3>Score Caps — None Currently Implemented</h3>
+  <p class="section-intro">
+    The current agent has no cap logic. All 7 caps below are absent, meaning a lead with only
+    Cvent confirmation can score Hot today.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:58%">Scenario</th>
+        <th style="width:15%">v2 Cap</th>
+        <th style="width:27%">Current Behaviour</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Only proof is that the company uses Cvent</td>
+        <td><strong>45 max</strong></td>
+        <td><span class="badge badge-missing">No cap — can score Hot</span></td>
+      </tr>
+      <tr>
+        <td>No verified event, no hiring signal, no complexity</td>
+        <td><strong>65 max</strong></td>
+        <td><span class="badge badge-missing">No cap</span></td>
+      </tr>
+      <tr>
+        <td>No relevant buyer / persona found</td>
+        <td><strong>70 max</strong></td>
+        <td><span class="badge badge-missing">No cap</span></td>
+      </tr>
+      <tr>
+        <td>Event inferred but no specific future date</td>
+        <td>Temporal capped at <strong>40%</strong> of urgency weight</td>
+        <td><span class="badge badge-missing">No cap</span></td>
+      </tr>
+      <tr>
+        <td>Low source confidence across key claims</td>
+        <td><strong>Cannot be Hot</strong></td>
+        <td><span class="badge badge-missing">No source-confidence gate</span></td>
+      </tr>
+      <tr>
+        <td>Job posting with no Cvent / platform language</td>
+        <td>Capacity signal capped at <strong>Medium</strong></td>
+        <td><span class="badge badge-missing">No cap</span></td>
+      </tr>
+      <tr>
+        <td>Generic funding news only</td>
+        <td>No lift unless tied to event expansion evidence</td>
+        <td><span class="badge badge-missing">No cap</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="table-caption">Additionally: Hot tier now requires ≥2 strong dynamic signals — a single high signal cannot produce Hot.</p>
+
+  <div class="footer">
+    <span class="footer-logo">LaunchHouse Signal-Tune v2 · Gap Analysis</span>
+    <span>Page 2 of 4</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 3 — RESEARCH + ENRICHMENT GAPS
+══════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-label">Section 2 — Research Agent</div>
+  <h2>Four of six required query sets are missing.</h2>
+  <p class="section-intro">
+    The current <code>ResearchAgent</code> runs 5 generic queries (news, hiring, tech stack, domain,
+    contact LinkedIn). The v2 model defines 6 targeted query sets with specific source priority order,
+    keyword libraries, and evidence extraction targets.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:26%">Query Set</th>
+        <th style="width:30%">Current State</th>
+        <th style="width:30%">v2 Requirement</th>
+        <th style="width:14%">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Company news</strong></td>
+        <td><code>"{company} company news recent"</code></td>
+        <td>Same intent</td>
+        <td><span class="badge badge-aligned">Aligned</span></td>
+      </tr>
+      <tr>
+        <td><strong>Cvent event pages</strong></td>
+        <td>SerpAPI <code>site:cvent.com</code> search</td>
+        <td>Same intent</td>
+        <td><span class="badge badge-aligned">Aligned</span></td>
+      </tr>
+      <tr>
+        <td><strong>Verified event urgency</strong></td>
+        <td>No dedicated query</td>
+        <td>Official event pages, Cvent registration URLs, confirmed future dates. Reject snippets with no date.</td>
+        <td><span class="badge badge-missing">Missing</span></td>
+      </tr>
+      <tr>
+        <td><strong>Hiring &amp; capacity gap</strong></td>
+        <td><code>"{company} event marketing team hiring"</code> — generic, no ATS targeting</td>
+        <td>ATS-targeted queries: Greenhouse → Lever → Workday → Ashby → SmartRecruiters → iCIMS → Jobvite. Extract Cvent terms in JD, posting age.</td>
+        <td><span class="badge badge-partial">Partial</span></td>
+      </tr>
+      <tr>
+        <td><strong>Cvent complexity signals</strong></td>
+        <td>Not queried</td>
+        <td>Module names (Attendee Hub, OnArrival, Appointments, housing, Data Bridge), integration targets, complexity descriptors.</td>
+        <td><span class="badge badge-missing">Missing</span></td>
+      </tr>
+      <tr>
+        <td><strong>MarTech &amp; reporting pressure</strong></td>
+        <td>Not queried</td>
+        <td>Salesforce, HubSpot, Marketo, Snowflake, Data Bridge, attribution, CRM sync, event ROI language.</td>
+        <td><span class="badge badge-missing">Missing</span></td>
+      </tr>
+      <tr>
+        <td><strong>Cvent Certified profile</strong></td>
+        <td>Not queried</td>
+        <td><code>"Cvent Certified" OR "#CventCertified"</code> per contact + compound rule: certified person left + active hiring → <code>capacity_stress_index: high</code>.</td>
+        <td><span class="badge badge-missing">Missing</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="divider"></div>
+
+  <div class="section-label">Section 3 — Enrichment Agent</div>
+  <h2>Five structured signal blocks are absent from the output schema.</h2>
+  <p class="section-intro">
+    The v2 model requires <code>EnrichmentAgent</code> to extract and store structured signal blocks
+    into the existing <code>enrichment_data.data</code> JSONB column. No migrations are needed —
+    only optional fields added to the Pydantic output model and updated prompt instructions.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:30%">Output Field</th>
+        <th style="width:28%">Current</th>
+        <th style="width:28%">v2 Requirement</th>
+        <th style="width:14%">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>company</code> firmographics</td>
+        <td>Size, revenue, industry, tech stack</td>
+        <td>Same</td>
+        <td><span class="badge badge-aligned">Aligned</span></td>
+      </tr>
+      <tr>
+        <td><code>contact</code> seniority</td>
+        <td>Seniority, department, buyer_persona</td>
+        <td>Same intent</td>
+        <td><span class="badge badge-aligned">Aligned</span></td>
+      </tr>
+      <tr>
+        <td><code>event_hiring_signals</code></td>
+        <td>Not extracted</td>
+        <td><code>has_open_cvent_role</code>, <code>role_titles_found</code>, <code>cvent_terms_in_jd</code>, <code>posting_age_days</code>, <code>signal_strength</code></td>
+        <td><span class="badge badge-missing">Missing</span></td>
+      </tr>
+      <tr>
+        <td><code>cvent_complexity_signals</code></td>
+        <td>Not extracted</td>
+        <td><code>modules_detected</code>, <code>integration_targets</code>, <code>complexity_level</code>, <code>source_urls</code></td>
+        <td><span class="badge badge-missing">Missing</span></td>
+      </tr>
+      <tr>
+        <td><code>cvent_certified_signal</code></td>
+        <td>Not extracted</td>
+        <td><code>found</code>, <code>person_relevance</code>, <code>certification_phrase</code>, <code>confidence</code></td>
+        <td><span class="badge badge-missing">Missing</span></td>
+      </tr>
+      <tr>
+        <td><code>program_pattern_signals</code></td>
+        <td>Loosely in <code>event_program</code> dict — unstructured</td>
+        <td>Typed array: <code>program_type</code>, <code>matched_title</code>, <code>repeatability</code>, <code>confidence</code></td>
+        <td><span class="badge badge-partial">Unstructured</span></td>
+      </tr>
+      <tr>
+        <td><code>capacity_stress_index</code></td>
+        <td>Not extracted</td>
+        <td><code>"high"</code> / <code>"medium"</code> / <code>"low"</code> compound signal (certified person left + active hiring = high)</td>
+        <td><span class="badge badge-missing">Missing</span></td>
+      </tr>
+      <tr>
+        <td><code>source_confidence_summary</code></td>
+        <td>Not extracted</td>
+        <td>Per-evidence confidence tier (official page &gt; ATS &gt; press release &gt; snippet &gt; inferred)</td>
+        <td><span class="badge badge-missing">Missing</span></td>
+      </tr>
+      <tr>
+        <td><code>recommended_template_driver</code></td>
+        <td>Not extracted</td>
+        <td>Primary routing key consumed by PersonalizationAgent</td>
+        <td><span class="badge badge-missing">Missing</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <span class="footer-logo">LaunchHouse Signal-Tune v2 · Gap Analysis</span>
+    <span>Page 3 of 4</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 4 — PERSONALIZATION + PHASED PLAN + QA
+══════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-label">Section 4 — Personalization Agent</div>
+  <h2>No routing table. No hook fields. No template driver.</h2>
+  <p class="section-intro">
+    The current PersonalizationAgent has no structured routing logic tied to the primary signal driver.
+    The v2 model defines 7 explicit routes, 5 output fields, and explicit "avoid" rules per template.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:30%">Primary Signal Driver</th>
+        <th style="width:15%">Template</th>
+        <th style="width:35%">Messaging Angle</th>
+        <th style="width:20%">Currently Wired</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Verified event 31–120 days out</td>
+        <td><strong>T8</strong> Build Scoping</td>
+        <td>Scope is being locked; fixed-fee Cvent implementation before the rush</td>
+        <td><span class="badge badge-missing">No</span></td>
+      </tr>
+      <tr>
+        <td>Verified event 0–30 days out</td>
+        <td><strong>T7</strong> Rush</td>
+        <td>Final-stretch support for registration, Attendee Hub, integrations</td>
+        <td><span class="badge badge-missing">No</span></td>
+      </tr>
+      <tr>
+        <td>Event / Cvent hiring gap</td>
+        <td><strong>T6</strong> or capacity-led <strong>T1</strong></td>
+        <td>Bridge Cvent/event ops capacity while internal team scales</td>
+        <td><span class="badge badge-missing">No</span></td>
+      </tr>
+      <tr>
+        <td>Cvent complexity</td>
+        <td><strong>T1/T6</strong> or <strong>T8</strong> if event exists</td>
+        <td>Registration architecture, multi-track, onsite/mobile, integrations</td>
+        <td><span class="badge badge-missing">No</span></td>
+      </tr>
+      <tr>
+        <td>MarTech / reporting pressure</td>
+        <td><strong>T6</strong> or <strong>T9</strong> if news-triggered</td>
+        <td>Cleaner Cvent setup improves downstream reporting and CRM data flow</td>
+        <td><span class="badge badge-missing">No</span></td>
+      </tr>
+      <tr>
+        <td>Program pattern only</td>
+        <td><strong>T6</strong> Fit-Based</td>
+        <td>Overflow capacity for repeatable event programs</td>
+        <td><span class="badge badge-missing">No</span></td>
+      </tr>
+      <tr>
+        <td>Cvent Certified only</td>
+        <td>No dedicated template</td>
+        <td>Background signal only — never use as cold outreach hook</td>
+        <td><span class="badge badge-missing">No</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="divider"></div>
+
+  <!-- Phased implementation plan -->
+  <div class="section-label">Section 5 — Implementation Plan</div>
+  <h2>Five phases. Prompt-and-config only. No migrations.</h2>
+  <p class="section-intro mb-16">All changes fit within the non-negotiable constraint from the v2 spec: prefer prompt/config changes and existing JSONB storage. No new database tables or data providers.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:8%">Phase</th>
+        <th style="width:32%">Change</th>
+        <th style="width:35%">Code Impact</th>
+        <th style="width:25%">Acceptance Gate</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1</strong></td>
+        <td>Replace scoring prompt with v2 8-signal model + 7 caps</td>
+        <td><code>ScoringAgent</code> prompt/config only</td>
+        <td>QA-01 through QA-06 pass; no single-signal Hot leads</td>
+      </tr>
+      <tr>
+        <td><strong>2</strong></td>
+        <td>Add 4 targeted query sets to ResearchAgent</td>
+        <td><code>ResearchAgent</code> query list + prompt. No new data provider.</td>
+        <td>Hiring, complexity, MarTech, Certified queries return evidence for known accounts</td>
+      </tr>
+      <tr>
+        <td><strong>3</strong></td>
+        <td>Extract structured signal blocks in EnrichmentAgent</td>
+        <td>Optional Pydantic fields in <code>EnrichmentOutput</code> + enrichment prompt update</td>
+        <td>5 new JSONB blocks present in enrichment_data for v2-enriched leads</td>
+      </tr>
+      <tr>
+        <td><strong>4</strong></td>
+        <td>Add score cap logic to ScoringAgent</td>
+        <td><code>ScoringAgent</code> prompt + optional post-processing in <code>scoring_agent.py</code></td>
+        <td>Cvent-only leads never exceed 45; no-buyer leads never exceed 70</td>
+      </tr>
+      <tr>
+        <td><strong>5</strong></td>
+        <td>PersonalizationAgent routing + hook fields</td>
+        <td>Routing decision logic + <code>personalization_hooks</code> fields in output</td>
+        <td><code>recommended_template_driver</code> present for all scored leads</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="divider"></div>
+
+  <!-- QA scenarios -->
+  <div class="section-label">Section 6 — QA Acceptance Scenarios</div>
+  <h2>6 scenarios define done.</h2>
+
+  <div class="qa-grid">
+    <div class="qa-card">
+      <div class="qa-id">QA-01 · Red-Hot Compound</div>
+      <div class="qa-scenario">Verified event 58 days out + open Event Ops Manager (Cvent, Attendee Hub, Salesforce) + Director of Events contact</div>
+      <span class="qa-tier tier-hot">Hot · 85–95</span>
+      <div class="mt-6" style="font-size:7.5pt;color:#64748b;">Route → T8 with capacity-aware personalization</div>
+    </div>
+    <div class="qa-card">
+      <div class="qa-id">QA-02 · Hot Event Complexity</div>
+      <div class="qa-scenario">Annual summit 80 days out + multi-track sessions + Head of Field Marketing</div>
+      <span class="qa-tier tier-hot">Hot · 78–88</span>
+      <div class="mt-6" style="font-size:7.5pt;color:#64748b;">Route → T8 build scoping angle</div>
+    </div>
+    <div class="qa-card">
+      <div class="qa-id">QA-03 · Capacity-Led Warm</div>
+      <div class="qa-scenario">Open Cvent Administrator + Marketing Ops role; no verified event</div>
+      <span class="qa-tier tier-warm">Warm · 65–75</span>
+      <div class="mt-6" style="font-size:7.5pt;color:#64748b;">Route → T6 or capacity-led T1; re-enrich monthly</div>
+    </div>
+    <div class="qa-card">
+      <div class="qa-id">QA-04 · Program Pattern</div>
+      <div class="qa-scenario">Annual incentive trip / Presidents Club with registration/travel details; no Cvent evidence</div>
+      <span class="qa-tier tier-warm">Warm · 58–72</span>
+      <div class="mt-6" style="font-size:7.5pt;color:#64748b;">Route → Fit-based sequence; no false Cvent claim</div>
+    </div>
+    <div class="qa-card">
+      <div class="qa-id">QA-05 · Certification Only</div>
+      <div class="qa-scenario">Cvent Certified profile, no event timing / hiring / complexity / reporting signals</div>
+      <span class="qa-tier tier-warm">Warm max</span>
+      <div class="mt-6" style="font-size:7.5pt;color:#64748b;">No certification-led email hook</div>
+    </div>
+    <div class="qa-card">
+      <div class="qa-id">QA-06 · Nurture</div>
+      <div class="qa-scenario">Known Cvent user in high-fit industry; no event timing, hiring, complexity, or pressure</div>
+      <span class="qa-tier tier-cold">Cold · 35–50</span>
+      <div class="mt-6" style="font-size:7.5pt;color:#64748b;">Hold or low-touch</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-label">Hard Acceptance Rules</div>
+    <p>
+      Implementation is complete only when: (1) all 6 QA scenarios hit expected tier and routing;
+      (2) no lead scores Hot on a single weak signal; (3) Cvent usage alone never produces a Hot lead;
+      (4) every Hot-score lead includes a high-confidence source URL for its primary signal driver;
+      (5) <code>recommended_template_driver</code> is present in <code>message.personalization_hooks</code> for all scored leads.
+    </p>
+  </div>
+
+  <div class="footer">
+    <span class="footer-logo">LaunchHouse Signal-Tune v2 · Gap Analysis</span>
+    <span>Page 4 of 4 · Confidential — Engineering Leadership Review</span>
+  </div>
+</div>
+
+</body>
+</html>

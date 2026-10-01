@@ -80,6 +80,7 @@ class Settings(BaseSettings):
     sender_first_name: str = "Snehdeep"
     sender_calendar_link: str = "#"
     company_site_url: str = "https://launchhouse.events/"
+    checklist_download_url: str = "https://launch-house.uk/checklist"
 
     # ── Testing / Dev helpers ─────────────────────────────
     # When set to "minutes" (or "seconds", "hours"), campaign step delay_days
